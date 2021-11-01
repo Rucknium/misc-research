@@ -47,8 +47,6 @@ M.outline <- M.outline[(-1) * (which.min(M.outline$x) + 1):(which.max(M.outline$
 
 M.outline <- M.outline[(-1) * c(1, 9), ]
 
-M.outline <- M.outline
-
 M.outline$x <- M.outline$x - min(M.outline$x)
 M.outline$x <- M.outline$x / max(M.outline$x)
 
