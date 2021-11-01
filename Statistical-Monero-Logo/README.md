@@ -1,6 +1,8 @@
 # Statistical Monero Logo
 These files create an animated gif that visually builds a Monero logo from random draws of a probability density function.
 
+![Statistical Monero Logo](Statistical-Monero-Logo.gif)
+
 The probability density function was constructed from the coordinates embedded in this SVG file:
 
 https://raw.githubusercontent.com/fluffypony/monero-logo-artefacts/master/Logo%20Subsequent%20Tweaks/monero%20file.svg
