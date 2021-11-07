@@ -1,9 +1,11 @@
 # Statistical Monero Logo
 These files create an animated gif that visually builds a Monero logo from random draws of a probability density function.
 
+![Statistical Monero Logo](Statistical-Monero-Logo.gif)
+
 The probability density function was constructed from the coordinates embedded in this SVG file:
 
-https://raw.githubusercontent.com/fluffypony/monero-logo-artefacts/master/Logo Subsequent%20Tweaks/monero%20file.svg
+https://raw.githubusercontent.com/fluffypony/monero-logo-artefacts/master/Logo%20Subsequent%20Tweaks/monero%20file.svg
 
 To create the gif, first run data-construction.R . This may take days to complete since over 50 million observations have to be drawn from a cumulative distribution function that is created through numerical integration. Then run gif-construction.R . For best results, it is recommended to install Cairo, which is software separate from R. Read gif-construction.R for more details.
 

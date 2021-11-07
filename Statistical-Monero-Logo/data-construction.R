@@ -47,8 +47,6 @@ M.outline <- M.outline[(-1) * (which.min(M.outline$x) + 1):(which.max(M.outline$
 
 M.outline <- M.outline[(-1) * c(1, 9), ]
 
-M.outline <- M.outline
-
 M.outline$x <- M.outline$x - min(M.outline$x)
 M.outline$x <- M.outline$x / max(M.outline$x)
 
@@ -88,7 +86,7 @@ for ( i in 3:48) {
   save(generated.logo.observations, file = "generated-logo-observations.Rdata")
   # When i = 48, y will be length 57280991
   
-  print(paste(i, length(generated.logo.observations) )
+  print(paste(i, length(generated.logo.observations) ))
 }
 
 
