@@ -18,7 +18,7 @@ install.packages("future.apply")
 
 You must have a Bitcoin Cash (BCH) full node synced with the transaction index enabled with the `-txindex` flag. As of now, the analysis has been tested with the [Bitcoin Unlimited](https://www.bitcoinunlimited.info/) node implementation. 
 
-### `extract-tx-graphs.R`
+## `extract-tx-graphs.R`
 
 The [R/extract-tx-graphs.R](R/extract-tx-graphs.R) script file issues JSON-RPC queries to `bitcoind`, the Bitcoin Cash node daemon. Make sure `bitcoind` is running before initiating this script.
 
@@ -41,3 +41,28 @@ List of 2
 ```
 
 Note that, unlike the underlying blockchain data, the position of outputs is indexed from one, not from zero.
+
+## `construct-edgelist.R`
+
+The [R/construct-edgelist.R](R/construct-edgelist.R) script file produces a SQL database that contains the [edge list](https://en.wikipedia.org/wiki/Edge_list) of the BCH transaction [graph](https://en.wikipedia.org/wiki/Graph_(discrete_mathematics)). Set `data.dir` to the same directory same as you used in  `extract-tx-graphs.R`.
+
+The script assigns an integer index to every output. Converting the transaction ID + output position to integer indixes is necessary so that the transaction graph can be stored in RAM. This script is single-threaded so as to avoid conflicts when writing to the database. It should take a few hours to complete.
+
+## `determine-descendants.R`
+
+The [R/determine-descendants.R](R/determine-descendants.R) script file uses the `igraph` package to determine which outputs in the unspent transaction output (UTXO) set can be traced back to an earlier CashFusion transaction. The dataset produced by the [CashFusionStats](https://github.com/Rucknium/CashFusionStats) repository is used to identify the CashFusion transactions.
+
+Set `data.dir` as before. These operations are time-consuming and may take weeks. There is an option to interrupt the process and restart it.
+
+## `descendant-statistics.R`
+
+The [R/descendant-statistics.R](R/descendant-statistics.R) script file merges the CashFusion descendants, which has been identified by integer indices, with their transaction ID identifiers. It then calculates a simple total of proportion of the UTXO set that is a CashFusion descendant as well as the value in BCH terms. A `"CashFusion-Descendants.csv` csv file is output with the following columns:
+
+```
+destination: An idenifier of an unspect output, in the form of TXID-position
+destination_index: An integer index for the unspent output that was used in the transaction graph analysis
+value: The value, in BCH, of the output
+is_cashfusion_descendant: Takes value of 1 if output is a descendant of a CashFusion transaction and 0 otherwise
+```
+
+Once again note that, unlike the underlying blockchain data, the position of outputs is indexed from one, not from zero.
