@@ -16,7 +16,8 @@ load(paste0(data.dir, "touched-UTXO-intermediate-COMPLETE.Rdata"), verbose = TRU
 con <- DBI::dbConnect(RSQLite::SQLite(), paste0(data.dir, "tx-graph-node-indices.db"))
 
 DBI::dbWriteTable(con, "utxovalue", 
-  data.frame(destination = character(0), value = numeric(0), stringsAsFactors = FALSE))
+  data.frame(destination = character(0), value = numeric(0), stringsAsFactors = FALSE),
+  overwrite = TRUE)
 
 
 tx.graph.files <- list.files(data.dir)
@@ -50,10 +51,12 @@ rm(master.edgelist)
 
 
 DBI::dbWriteTable(con, "utxoset", 
-  data.frame(destination_index = utxo.set, stringsAsFactors = FALSE))
+  data.frame(destination_index = utxo.set, stringsAsFactors = FALSE),
+  overwrite = TRUE)
 
 DBI::dbWriteTable(con, "utxoset_intermediate_1", 
-  data.frame(destination = character(0), destination_index = integer(0), stringsAsFactors = FALSE))
+  data.frame(destination = character(0), destination_index = integer(0), stringsAsFactors = FALSE),
+  overwrite = TRUE)
 
 base::date()
 DBI::dbExecute(con, "INSERT INTO utxoset_intermediate_1 SELECT 
@@ -64,7 +67,8 @@ base::date()
 
 DBI::dbWriteTable(con, "utxoset_intermediate_2", 
   data.frame(destination = character(0), destination_index = integer(0),
-    value = numeric(0), stringsAsFactors = FALSE))
+    value = numeric(0), stringsAsFactors = FALSE),
+  overwrite = TRUE)
 
 base::date()
 DBI::dbExecute(con, "INSERT INTO utxoset_intermediate_2 SELECT 
@@ -76,16 +80,39 @@ base::date()
 utxoset.value.extended <- DBI::dbGetQuery(con, 
   'SELECT * FROM utxoset_intermediate_2')
 
+colnames(utxoset.value.extended) <- c("txid_position", "tx_graph_index", "value")
+
 utxoset.value.extended$is_cashfusion_descendant <- ifelse(
   utxoset.value.extended$destination_index %in% touched.UTXO, 1L, 0L)
 
-100 * prop.table(table(utxoset.value.extended$is_cashfusion_descendant))
 
-utxoset.value.aggregated <- aggregate(utxoset.value.extended$value, 
-  by = list(utxoset.value.extended$is_cashfusion_descendant), FUN = sum)
+unspent_coinbases <- readRDS(paste0(data.dir, "unspent_coinbases.rds"))
+
+unspent_coinbases$tx_graph_index <- NA_integer_
+unspent_coinbases$is_coinbase <- 1L
+unspent_coinbases$is_cashfusion_descendant <- 0L
+
+utxoset.value.extended$is_coinbase <- 0L
+
+utxoset.value.extended <- rbind(
+  utxoset.value.extended[, c("txid_position", "tx_graph_index", "value", "is_cashfusion_descendant", "is_coinbase")],
+  unspent_coinbases[, c("txid_position", "tx_graph_index", "value", "is_cashfusion_descendant", "is_coinbase")]
+  )
+
+
+
+100 * prop.table(table(utxoset.value.extended$is_cashfusion_descendant[
+  utxoset.value.extended$value > 0 ]))
+
+utxoset.value.aggregated <- aggregate(utxoset.value.extended$value[
+  utxoset.value.extended$value > 0 ], 
+  by = list(utxoset.value.extended$is_cashfusion_descendant[
+    utxoset.value.extended$value > 0 ]), FUN = sum)
 
 100 * utxoset.value.aggregated$x / sum(utxoset.value.aggregated$x)
 
+
+saveRDS(utxoset.value.extended, file = paste0(data.dir, "CashFusion-Descendants.rds"), row.names = FALSE)
 
 write.csv(utxoset.value.extended, file = paste0(data.dir, "CashFusion-Descendants.csv"), row.names = FALSE)
 

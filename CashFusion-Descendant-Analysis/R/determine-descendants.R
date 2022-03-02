@@ -11,7 +11,7 @@ library(igraph)
 data.dir <- ""
 # Input data directory here, with trailing "/"
 
-fusions.df <- readRDS("https://github.com/Rucknium/CashFusionStats/raw/main/data/fusions_df.rds")
+fusions.df <- readRDS(url("https://github.com/Rucknium/CashFusionStats/raw/main/data/fusions_df.rds"))
 # Get the list of transactions that are the fusion transactions
 
 
@@ -58,7 +58,7 @@ for ( i in fusioned.nodes.to.process[counter.i:length(fusioned.nodes.to.process)
         counter.i, ".Rdata"), compress = FALSE)
   }
   
-  bch.paths <- distances(bch.graph, 
+  bch.paths <- igraph::distances(bch.graph, 
     v = i, 
     to = to.set, mode = "out")
   
