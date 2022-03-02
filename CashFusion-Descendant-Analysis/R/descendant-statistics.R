@@ -43,7 +43,12 @@ for (file.iter in tx.graph.files) {
 master.edgelist <- DBI::dbGetQuery(con, 
   "SELECT origin_index, destination_index FROM edgelist_intermediate_2")
 
+str(master.edgelist)
+
 master.edgelist <- as.matrix(master.edgelist)
+
+data.table::uniqueN(c(master.edgelist))
+
 
 utxo.set <- setdiff(master.edgelist[, 2], master.edgelist[, 1])
 
@@ -83,20 +88,23 @@ utxoset.value.extended <- DBI::dbGetQuery(con,
 colnames(utxoset.value.extended) <- c("txid_position", "tx_graph_index", "value")
 
 utxoset.value.extended$is_cashfusion_descendant <- ifelse(
-  utxoset.value.extended$destination_index %in% touched.UTXO, 1L, 0L)
+  utxoset.value.extended$tx_graph_index %in% touched.UTXO, 1L, 0L)
 
 
-unspent_coinbases <- readRDS(paste0(data.dir, "unspent_coinbases.rds"))
+unspent.coinbases <- readRDS(paste0(data.dir, "unspent_coinbases.rds"))
 
-unspent_coinbases$tx_graph_index <- NA_integer_
-unspent_coinbases$is_coinbase <- 1L
-unspent_coinbases$is_cashfusion_descendant <- 0L
+nrow(unspent.coinbases)
+
+
+unspent.coinbases$tx_graph_index <- NA_integer_
+unspent.coinbases$is_coinbase <- 1L
+unspent.coinbases$is_cashfusion_descendant <- 0L
 
 utxoset.value.extended$is_coinbase <- 0L
 
 utxoset.value.extended <- rbind(
   utxoset.value.extended[, c("txid_position", "tx_graph_index", "value", "is_cashfusion_descendant", "is_coinbase")],
-  unspent_coinbases[, c("txid_position", "tx_graph_index", "value", "is_cashfusion_descendant", "is_coinbase")]
+  unspent.coinbases[, c("txid_position", "tx_graph_index", "value", "is_cashfusion_descendant", "is_coinbase")]
   )
 
 
@@ -109,10 +117,12 @@ utxoset.value.aggregated <- aggregate(utxoset.value.extended$value[
   by = list(utxoset.value.extended$is_cashfusion_descendant[
     utxoset.value.extended$value > 0 ]), FUN = sum)
 
-100 * utxoset.value.aggregated$x / sum(utxoset.value.aggregated$x)
+utxoset.value.aggregated$percent <- 100 * utxoset.value.aggregated$x / sum(utxoset.value.aggregated$x)
+
+utxoset.value.aggregated
 
 
-saveRDS(utxoset.value.extended, file = paste0(data.dir, "CashFusion-Descendants.rds"), row.names = FALSE)
+saveRDS(utxoset.value.extended, file = paste0(data.dir, "CashFusion-Descendants.rds"))
 
 write.csv(utxoset.value.extended, file = paste0(data.dir, "CashFusion-Descendants.csv"), row.names = FALSE)
 

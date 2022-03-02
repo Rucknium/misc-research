@@ -89,6 +89,9 @@ for (height.set in heights.to.process) {
 
 coinbases <- data.table::rbindlist(coinbases)
 
+nrow(coinbases)
+
+
 coinbases$txid_position <- paste0(coinbases$txid, "-", 
   formatC(coinbases$position, width = 4, format = "f", flag = "0", digits = 0))
 
