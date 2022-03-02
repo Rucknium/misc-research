@@ -13,7 +13,11 @@ The main analysis is done with the R statistical programming language. R itself 
 ```R
 install.packages("rbch")
 install.packages("data.table")
-install.packages("future.apply")
+install.packages("future.apply") 
+install.packages("RSQLite")
+install.packages("DBI")
+install.packages("igraph")
+install.packages("stringr")
 ```
 
 You must have a Bitcoin Cash (BCH) full node synced with the transaction index enabled with the `-txindex` flag. As of now, the analysis has been tested with the [Bitcoin Unlimited](https://www.bitcoinunlimited.info/) node implementation. 
