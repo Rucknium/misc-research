@@ -16,7 +16,7 @@ data.dir <- ""
 bch.config <- rbch::conrpc(bitcoin.conf.file)
 
 
-first.fusion.height <- 610700
+first.fusion.height <- 646085
 
 current.block.height <- rbch::getblockchaininfo(bch.config)@result$blocks
 
