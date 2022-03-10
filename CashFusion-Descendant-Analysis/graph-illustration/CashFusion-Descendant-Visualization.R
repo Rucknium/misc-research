@@ -34,8 +34,8 @@ plot(illustrative.graph,
 
 legend("topleft", 
   legend = c("CashFusion", 
-    "Spent Cashfusion Descendant", "Spent Non-Cashfusion Descendant", 
-    "Unspent Cashfusion Descendant", "Unspent non-Cashfusion Descendant"),
+    "Spent CashFusion Descendant", "Spent Non-CashFusion Descendant", 
+    "Unspent CashFusion Descendant", "Unspent Non-CashFusion Descendant"),
   fill = c("red", "purple", "blue", "orange", "green"),
   cex = 1.8, bty = "n")
 

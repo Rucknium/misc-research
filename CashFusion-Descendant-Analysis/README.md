@@ -22,6 +22,8 @@ install.packages("stringr")
 
 You must have a Bitcoin Cash (BCH) full node synced with the transaction index enabled with the `-txindex` flag. As of now, the analysis has been tested with the [Bitcoin Unlimited](https://www.bitcoinunlimited.info/) node implementation. 
 
+It is best to run the following script files successively in separate R sessions for better RAM management.
+
 ## `extract-tx-graphs.R`
 
 The [R/extract-tx-graphs.R](R/extract-tx-graphs.R) script file issues JSON-RPC queries to `bitcoind`, the Bitcoin Cash node daemon. Make sure `bitcoind` is running before initiating this script.
@@ -48,9 +50,13 @@ Note that, unlike the underlying blockchain data, the position of outputs is ind
 
 ## `construct-edgelist.R`
 
-The [R/construct-edgelist.R](R/construct-edgelist.R) script file produces a SQL database that contains the [edge list](https://en.wikipedia.org/wiki/Edge_list) of the BCH transaction [graph](https://en.wikipedia.org/wiki/Graph_(discrete_mathematics)). Set `data.dir` to the same directory same as you used in  `extract-tx-graphs.R`.
+The [R/construct-edgelist.R](R/construct-edgelist.R) script file produces a SQL database that contains the [edge list](https://en.wikipedia.org/wiki/Edge_list) of the BCH transaction [graph](https://en.wikipedia.org/wiki/Graph_(discrete_mathematics)). Set `data.dir` to the same directory same as you used in `extract-tx-graphs.R`.
 
 The script assigns an integer index to every output. Converting the transaction ID + output position to integer indixes is necessary so that the transaction graph can be stored in RAM. This script is single-threaded so as to avoid conflicts when writing to the database. It should take a few hours to complete.
+
+## `get-coinbases.R`
+
+The [R/get-coinbases.R](R/get-coinbases.R) script file produces a `.rds` file that contains the coinbase outputs. Coinbases are special vertices in the transaction graph since they have no inputs. Set `data.dir` to the same directory same as you used in `extract-tx-graphs.R`.
 
 ## `determine-descendants.R`
 
