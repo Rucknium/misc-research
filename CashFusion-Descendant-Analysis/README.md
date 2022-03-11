@@ -11,8 +11,10 @@ Be advised that the analysis takes several weeks of computing time, upwards of 5
 The main analysis is done with the R statistical programming language. R itself can be downloaded [here](https://cloud.r-project.org/). [RStudio](https://www.rstudio.com/products/rstudio/download/#download) is a good IDE for R. Install the necessary R packages with:
 
 ```R
-install.packages(c("rbch","data.table","future.apply","RSQLite","DBI","igraph","stringr"))
+install.packages(c("rbch","data.table","future.apply","RSQLite","DBI","igraph","stringr","curl"))
 ```
+
+Linux users may have difficulties installing the required packages due to external dependencies (as they must be compiled from source). Ubuntu users will require ```build-essential```, ```libcurl4-openssl-dev``` and  ```libgmp3-dev```. Please raise an issue here if you encounter any further issues. 
 
 You must have a Bitcoin Cash (BCH) full node synced with the transaction index enabled with the `-txindex` flag. As of now, the analysis has been tested with the [Bitcoin Unlimited](https://www.bitcoinunlimited.info/) node implementation. 
 
@@ -28,9 +30,18 @@ In the R script file you must set `bitcoin.conf.file` to the filepath of your bi
 testnet=0
 rpcuser=<USER>
 rpcpassword=<PASSWORD>
+rpcport=8332
+txindex=1
+rpcallowip=0.0.0.0/0
+rpcbind=localhost
+server=1
 ```
 
-Input \<USER\> and \<PASSWORD\> of your choice.
+Input \<USER\> and \<PASSWORD\> of your choice. Perform a quick sanity check to ensure you can access your node via JSON-RPC. The following should return data, and not refuse your connection: (user being the value of rpcuser / pass the value of rpcpass)
+
+```
+curl --data-binary '{"jsonrpc":"1.0","id":"curltext","method":"getblockchaininfo","params":[]}' -H 'content-type:text/plain;' http://user:pass@localhost:8332/
+```
 
 The script spawns multiple R process threads to accelerate queries to `bitcoind` and will take several hours to execute. In the specified data directory, a set of files named `tx_graph_height_BEGIN _to_END.rds` will be created.
 
