@@ -11,13 +11,7 @@ Be advised that the analysis takes several weeks of computing time, upwards of 5
 The main analysis is done with the R statistical programming language. R itself can be downloaded [here](https://cloud.r-project.org/). [RStudio](https://www.rstudio.com/products/rstudio/download/#download) is a good IDE for R. Install the necessary R packages with:
 
 ```R
-install.packages("rbch")
-install.packages("data.table")
-install.packages("future.apply") 
-install.packages("RSQLite")
-install.packages("DBI")
-install.packages("igraph")
-install.packages("stringr")
+install.packages(c("rbch","data.table","future.apply","RSQLite","DBI","igraph","stringr"))
 ```
 
 You must have a Bitcoin Cash (BCH) full node synced with the transaction index enabled with the `-txindex` flag. As of now, the analysis has been tested with the [Bitcoin Unlimited](https://www.bitcoinunlimited.info/) node implementation. 
