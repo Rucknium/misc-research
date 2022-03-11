@@ -36,7 +36,7 @@ rpcuser=<USER>
 rpcpassword=<PASSWORD>
 ```
 
-Input <USER> and <PASSWORD> of your choice.
+Input \<USER\> and \<PASSWORD\> of your choice.
 
 The script spawns multiple R process threads to accelerate queries to `bitcoind` and will take several hours to execute. In the specified data directory, a set of files named `tx_graph_height_BEGIN _to_END.rds` will be created.
 
