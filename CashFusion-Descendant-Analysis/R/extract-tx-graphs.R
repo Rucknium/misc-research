@@ -29,7 +29,7 @@ future::plan(future::multiprocess())
 
 for (height.set in heights.to.process) {
   
-  fused.all.ls <- future.apply::future_lapply(height.set, function(iter.block.height) {
+  extracted.txs <- future.apply::future_lapply(height.set, function(iter.block.height) {
     
     if (iter.block.height %% 1000 == 0) {
       cat(iter.block.height, base::date(), "\n")
@@ -44,6 +44,7 @@ for (height.set in heights.to.process) {
     raw.txs.ls <- block.data@result$tx
     
     if ( length(raw.txs.ls) < 2) { return(list(incoming = NULL, outgoing = NULL)) }
+    # Skip coinbase-only blocks
     
     # Results of this lapply below are returned
     
@@ -95,21 +96,21 @@ for (height.set in heights.to.process) {
   })
   
   
-  print(object.size(fused.all.ls), units = "Mb")
+  print(object.size(extracted.txs), units = "Mb")
   
-  fused.all.ls <- unlist(fused.all.ls, recursive = FALSE)
+  extracted.txs <- unlist(extracted.txs, recursive = FALSE)
   
-  incoming <- data.table::rbindlist(lapply(fused.all.ls, function(x) {
+  incoming <- data.table::rbindlist(lapply(extracted.txs, function(x) {
     x[[1]]
   })
   )
   
-  outgoing <- data.table::rbindlist(lapply(fused.all.ls, function(x) {
+  outgoing <- data.table::rbindlist(lapply(extracted.txs, function(x) {
     x[[2]]
   })
   )
   
-  rm(fused.all.ls)
+  rm(extracted.txs)
   
   saveRDS(list(incoming = incoming, outgoing = outgoing), 
     file = paste0(data.dir, "tx_graph_height_", paste0(range(height.set), collapse = "_to_"), ".rds"), 

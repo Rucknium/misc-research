@@ -4,7 +4,7 @@
 
 ## How to reproduce the analysis
 
-Be advised that the analysis takes several weeks of computing time and upwards of 50 GB of available RAM to execute.
+Be advised that the analysis takes several weeks of computing time, upwards of 50 GB of available RAM, and about 400 GB of storage space to execute.
 
 ### Prerequisites
 

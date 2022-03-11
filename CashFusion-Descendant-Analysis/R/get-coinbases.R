@@ -43,7 +43,7 @@ coinbases <- list()
 
 for (height.set in heights.to.process) {
   
-  fused.all.ls <- future.apply::future_lapply(height.set, function(iter.block.height) {
+  extracted.txs <- future.apply::future_lapply(height.set, function(iter.block.height) {
     
     if (iter.block.height %% 1000 == 0) {
       cat(iter.block.height, base::date(), "\n")
@@ -73,15 +73,15 @@ for (height.set in heights.to.process) {
   })
   
   
-  print(object.size(fused.all.ls), units = "Mb")
+  print(object.size(extracted.txs), units = "Mb")
   
-  fused.all.ls <- unlist(fused.all.ls, recursive = FALSE)
+  extracted.txs <- unlist(extracted.txs, recursive = FALSE)
   
-  outgoing <- data.table::rbindlist(fused.all.ls)
+  outgoing <- data.table::rbindlist(extracted.txs)
   
   coinbases[[length(coinbases) + 1]] <- outgoing
   
-  rm(fused.all.ls)
+  rm(extracted.txs)
   rm(outgoing)
   
 }
