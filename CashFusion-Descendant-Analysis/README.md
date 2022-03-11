@@ -22,7 +22,7 @@ It is best to run the following script files successively in separate R sessions
 
 The [R/extract-tx-graphs.R](R/extract-tx-graphs.R) script file issues JSON-RPC queries to `bitcoind`, the Bitcoin Cash node daemon. Make sure `bitcoind` is running before initiating this script.
 
-In the R script file you must set `bitcoin.conf.file` to the filepath of your bitcoin.conf file and `data.dir` to the directory where you want files to be stored. Your bitcoin.conf file should contain these lines as a minimum:
+In the R script file you must set `bitcoin.conf.file` to the filepath of your bitcoin.conf file and `data.dir` to the directory where you want files to be stored. Note that the `data.dir` in the R file should be a different directory than the `bitcoind` data dir where the BCH blockchain is stored. Your bitcoin.conf file should contain these lines at a minimum:
 
 ```
 testnet=0
