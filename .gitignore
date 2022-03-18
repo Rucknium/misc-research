@@ -54,5 +54,4 @@ docs/
 
 # translation temp files
 po/*~
-
-
+/Monero-Cryptography-Benchmarks/raw-data/*
