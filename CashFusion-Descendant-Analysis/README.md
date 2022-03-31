@@ -2,6 +2,8 @@
 
 ![CashFusion-Red-Team-Logo](https://github.com/Rucknium/CashFusionStats/raw/beta/www/images/logos/CashFusion-Red-Team-logo-1869-by-478.png)
 
+### See [this article](https://rucknium.me/posts/cashfusion-descendants/) for commentary on the results
+
 ## How to reproduce the analysis
 
 Be advised that the analysis takes several weeks of computing time, upwards of 50 GB of available RAM, and about 400 GB of storage space to execute.
@@ -79,13 +81,15 @@ Set `data.dir` as before. These operations are time-consuming and may take weeks
 
 ## `descendant-statistics.R`
 
-The [R/descendant-statistics.R](R/descendant-statistics.R) script file merges the CashFusion descendants, which has been identified by integer indices, with their transaction ID identifiers. It then calculates a simple total of proportion of the UTXO set that is a CashFusion descendant as well as the value in BCH terms. A `"CashFusion-Descendants.csv` csv file is output with the following columns:
+The [R/descendant-statistics.R](R/descendant-statistics.R) script file merges the CashFusion descendants, which has been identified by integer indices, with their transaction ID identifiers. It then calculates a simple total of proportion of the UTXO set that is a CashFusion descendant as well as the value in BCH terms. A `CashFusion-Descendants.csv` csv file is output with the following columns:
 
 ```
-destination: An idenifier of an unspect output, in the form of TXID-position
-destination_index: An integer index for the unspent output that was used in the transaction graph analysis
-value: The value, in BCH, of the output
-is_cashfusion_descendant: Takes value of 1 if output is a descendant of a CashFusion transaction and 0 otherwise
+txid_position: An idenifier of an unspent output, in the form of TXID-position. The position of outputs is indexed from one, not from zero.
+tx_graph_index: An integer index for the unspent output that was used in the transaction graph analysis.
+value: The value, in BCH, of the output. Zero-valued outputs are included in the dataset.
+is_cashfusion_descendant: Takes value of 1 if output is a descendant of a CashFusion transaction and 0 otherwise.
+is_coinbase: Takes value of 1 if output is the result of a coinbase transaction and 0 otherwise.
+
 ```
 
 Once again note that, unlike the underlying blockchain data, the position of outputs is indexed from one, not from zero.
