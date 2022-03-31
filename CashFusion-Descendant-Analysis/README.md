@@ -6,7 +6,7 @@
 
 ## How to reproduce the analysis
 
-Be advised that the analysis takes several weeks of computing time, upwards of 50 GB of available RAM, and about 400 GB of storage space to execute.
+Be advised that the analysis takes several weeks of computing time, upwards of 50 GB of available RAM, and about 400 GB of storage space to execute. The scripts call [this](https://gist.githubusercontent.com/jeffwong/5925000/raw/bf02ed0dd2963169a91664be02fb18e45c4d1e20/sqlitewritetable.R) external script file and downloads [this](https://github.com/Rucknium/CashFusionStats/raw/main/data/fusions_df.rds) R data file.
 
 ### Prerequisites
 
