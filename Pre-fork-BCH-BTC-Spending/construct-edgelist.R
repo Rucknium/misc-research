@@ -9,6 +9,8 @@ library(DBI)
 data.dir <- ""
 # Input data directory here, with trailing "/"
 
+last.pre.fork.block <- 478558
+
 source("https://gist.githubusercontent.com/jeffwong/5925000/raw/bf02ed0dd2963169a91664be02fb18e45c4d1e20/sqlitewritetable.R")
 # From https://gist.github.com/jeffwong/5925000
 # Modifies RSQLite's sqliteWriteTable function so as to reject duplicates
@@ -28,7 +30,7 @@ DBI::dbWriteTable(con, "edgelist",
 
 tx.graph.files <- list.files(paste0(data.dir, "tx_graphs/"))
 tx.graph.files <- tx.graph.files[grepl("^tx_graph.+rds$", tx.graph.files)]
-
+tx.graph.files <- sort(tx.graph.files)
 
 tx.graph.indexed <- vector("list", length(tx.graph.files))
 names(tx.graph.indexed) <- tx.graph.files
@@ -54,6 +56,12 @@ for (file.iter in tx.graph.files) {
   DBI::dbWriteTable(con, "edgelist", 
     tx.graph.chunk, append = TRUE)
   
+  tx.graph.chunk <- tx.graph.chunk[block_height <= last.pre.fork.block, ]
+  
+  cat(file.iter, base::date(), "\n")
+  
+  if (nrow(tx.graph.chunk) == 0) {next}
+  
   new.nodes <- unique(c(tx.graph.chunk$origin, tx.graph.chunk$destination))
   
   nodes.to.insert <- data.frame(node = new.nodes, node_index = NA, stringsAsFactors = FALSE)
@@ -61,7 +69,7 @@ for (file.iter in tx.graph.files) {
   mysqliteWriteTable(con, "nodes", 
     nodes.to.insert, append = TRUE, row.names = FALSE, ignore = TRUE)
   
-  cat(file.iter, base::date(), "\n")
+  cat(nrow(nodes.to.insert), "Nodes written\n")
   
 }
 
@@ -76,6 +84,7 @@ DBI::dbExecute(con, "INSERT INTO edgelist_intermediate_1 SELECT
   origin, destination, value, block_height, node_index FROM
   edgelist JOIN nodes ON edgelist.origin = nodes.node")
 base::date()
+# JOIN is an INNER JOIN, so post-fork nodes are not included
 
 
 DBI::dbExecute(con, 
