@@ -130,7 +130,7 @@ rev_date <- c_trans("reverse", "time")
 # #0AC18E BCH color
 # https://bitcoincashstandards.org/
 
-png(paste0(bch.data.dir, "preliminary-pre-fork-BTC-BCH-spent-status-by-value.png"), width = 800, height = 2000)
+png("Pre-fork-BCH-BTC-Spending/images/pre-fork-BTC-BCH-spent-status-by-value.png", width = 800, height = 2000)
 
 print(
   ggplot(spent.status.by.day.value.reshaped, aes(x = block_time.date, y = value, fill = variable)) + 
@@ -171,7 +171,7 @@ dev.off()
 
 
 
-png(paste0(bch.data.dir, "preliminary-pre-fork-BTC-BCH-spent-status-by-outputs.png"), width = 800, height = 2000)
+png("Pre-fork-BCH-BTC-Spending/images/pre-fork-BTC-BCH-spent-status-by-outputs.png", width = 800, height = 2000)
 
 print(
   ggplot(spent.status.by.day.outputs.reshaped, aes(x = block_time.date, y = value, fill = variable)) + 
@@ -217,7 +217,7 @@ ann_text.value <- data.frame(
 # https://stackoverflow.com/questions/11889625/annotating-text-on-individual-facet-in-ggplot2
 
 
-png(paste0(bch.data.dir, "preliminary-pre-fork-BTC-BCH-trans-matrix-by-value.png"), width = 800, height = 2000)
+png("Pre-fork-BCH-BTC-Spending/images/pre-fork-BTC-BCH-state-transition-by-value.png", width = 800, height = 2000)
 
 print(
   ggplot(state.trans.by.day.value.reshaped, aes(x = block_time.date, y = value, fill = variable)) + 
@@ -250,7 +250,7 @@ ann_text.output <- data.frame(
   value = 280000,
   variable = factor("outputs.ft.to.tt", levels = levels(state.trans.by.day.outputs.reshaped$variable)))
 
-png(paste0(bch.data.dir, "preliminary-pre-fork-BTC-BCH-trans-matrix-by-outputs.png"), width = 800, height = 2000)
+png("Pre-fork-BCH-BTC-Spending/images/pre-fork-BTC-BCH-state-transition-by-outputs.png", width = 800, height = 2000)
 
 print(
   ggplot(state.trans.by.day.outputs.reshaped, aes(x = block_time.date, y = value, fill = variable)) + 
