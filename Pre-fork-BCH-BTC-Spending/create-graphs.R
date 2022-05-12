@@ -6,6 +6,12 @@ library(Cairo)
 # NOTE: Also need lubridate package installed, but not loading it due to 
 # it masking functions
 
+bch.data.dir <- ""
+
+spent.status.by.day <- readRDS(paste0(bch.data.dir, "spent_status_by_day.rds"))
+state.trans.by.day <- readRDS(paste0(bch.data.dir, "state_trans_by_day.rds"))
+
+
 
 
 sum.value.pre.fork <- sum(spent.status.by.day[1, 
@@ -69,33 +75,33 @@ spent.status.by.day.outputs.reshaped[, variable :=
 
 
 
-trans.matrix.prep.value.reshaped <- melt(trans.matrix.prep[, 
-  .(block_time.date, value.uu.to.su, value.uu.to.us, value.uu.to.ss,
-    value.su.to.ss, value.us.to.ss)], id.vars = c("block_time.date"),
-  measure.vars = c("value.uu.to.su", "value.uu.to.us", "value.uu.to.ss",
-    "value.su.to.ss", "value.us.to.ss"))
+state.trans.by.day.value.reshaped <- melt(state.trans.by.day[, 
+  .(block_time.date, value.ff.to.tf, value.ff.to.ft, value.ff.to.tt,
+    value.tf.to.tt, value.ft.to.tt)], id.vars = c("block_time.date"),
+  measure.vars = c("value.ff.to.tf", "value.ff.to.ft", "value.ff.to.tt",
+    "value.tf.to.tt", "value.ft.to.tt"))
 
 
-trans.matrix.prep.value.reshaped[, block_time.date := as.POSIXct(block_time.date)]
-trans.matrix.prep.value.reshaped[, variable := 
-    factor(variable, levels = c("value.uu.to.su", "value.uu.to.us", "value.uu.to.ss",
-      "value.su.to.ss", "value.us.to.ss"))]
+state.trans.by.day.value.reshaped[, block_time.date := as.POSIXct(block_time.date)]
+state.trans.by.day.value.reshaped[, variable := 
+    factor(variable, levels = c("value.ff.to.tf", "value.ff.to.ft", "value.ff.to.tt",
+      "value.tf.to.tt", "value.ft.to.tt"))]
 
 
 
 
 
-trans.matrix.prep.outputs.reshaped <- melt(trans.matrix.prep[, 
-  .(block_time.date, outputs.uu.to.su, outputs.uu.to.us, outputs.uu.to.ss,
-    outputs.su.to.ss, outputs.us.to.ss)], id.vars = c("block_time.date"),
-  measure.vars = c("outputs.uu.to.su", "outputs.uu.to.us", "outputs.uu.to.ss",
-    "outputs.su.to.ss", "outputs.us.to.ss"))
+state.trans.by.day.outputs.reshaped <- melt(state.trans.by.day[, 
+  .(block_time.date, outputs.ff.to.tf, outputs.ff.to.ft, outputs.ff.to.tt,
+    outputs.tf.to.tt, outputs.ft.to.tt)], id.vars = c("block_time.date"),
+  measure.vars = c("outputs.ff.to.tf", "outputs.ff.to.ft", "outputs.ff.to.tt",
+    "outputs.tf.to.tt", "outputs.ft.to.tt"))
 
 
-trans.matrix.prep.outputs.reshaped[, block_time.date := as.POSIXct(block_time.date)]
-trans.matrix.prep.outputs.reshaped[, variable := 
-    factor(variable, levels = c("outputs.uu.to.su", "outputs.uu.to.us", "outputs.uu.to.ss",
-      "outputs.su.to.ss", "outputs.us.to.ss"))]
+state.trans.by.day.outputs.reshaped[, block_time.date := as.POSIXct(block_time.date)]
+state.trans.by.day.outputs.reshaped[, variable := 
+    factor(variable, levels = c("outputs.ff.to.tf", "outputs.ff.to.ft", "outputs.ff.to.tt",
+      "outputs.tf.to.tt", "outputs.ft.to.tt"))]
 
 
 
@@ -206,7 +212,7 @@ dev.off()
 ann_text.value <- data.frame(
   block_time.date = as.POSIXct("2022-03-15"),
   value = 300000,
-  variable = factor("value.us.to.ss", levels = levels(trans.matrix.prep.value.reshaped$variable)))
+  variable = factor("value.ft.to.tt", levels = levels(state.trans.by.day.value.reshaped$variable)))
 # Due to
 # https://stackoverflow.com/questions/11889625/annotating-text-on-individual-facet-in-ggplot2
 
@@ -214,15 +220,15 @@ ann_text.value <- data.frame(
 png(paste0(bch.data.dir, "preliminary-pre-fork-BTC-BCH-trans-matrix-by-value.png"), width = 800, height = 2000)
 
 print(
-  ggplot(trans.matrix.prep.value.reshaped, aes(x = block_time.date, y = value, fill = variable)) + 
+  ggplot(state.trans.by.day.value.reshaped, aes(x = block_time.date, y = value, fill = variable)) + 
     ggtitle("State Transition of Pre-fork BTC and BCH by Bitcoin Value\nKEY: {BTC Spent}{BCH Spent} to {BTC Spent}{BCH Spent}") +
     geom_line(aes(color = variable)) + coord_flip() + 
     scale_x_continuous(trans = rev_date, labels = date_format("%b-%Y"), expand = c(0, 0),
       breaks = date.breaks) +
     scale_y_continuous(labels = scales::comma) +
     facet_grid(. ~ variable, labeller = labeller(variable = 
-        c(value.uu.to.su = "FF to TF", value.uu.to.us = "FF to FT", value.uu.to.ss = "FF to TT",
-          value.su.to.ss = "TF to TT", value.us.to.ss = "FT to TT" ))) +
+        c(value.ff.to.tf = "FF to TF", value.ff.to.ft = "FF to FT", value.ff.to.tt = "FF to TT",
+          value.tf.to.tt = "TF to TT", value.ft.to.tt = "FT to TT" ))) +
     ylab("Quantity of Bitcoin Value Transitioned per Day") +
     theme(legend.position = "none", axis.title.y = element_blank(),
       strip.text.x = element_text(size = 20), plot.title = element_text(size = 24),
@@ -242,20 +248,20 @@ dev.off()
 ann_text.output <- data.frame(
   block_time.date = as.POSIXct("2022-03-15"),
   value = 280000,
-  variable = factor("outputs.us.to.ss", levels = levels(trans.matrix.prep.outputs.reshaped$variable)))
+  variable = factor("outputs.ft.to.tt", levels = levels(state.trans.by.day.outputs.reshaped$variable)))
 
 png(paste0(bch.data.dir, "preliminary-pre-fork-BTC-BCH-trans-matrix-by-outputs.png"), width = 800, height = 2000)
 
 print(
-  ggplot(trans.matrix.prep.outputs.reshaped, aes(x = block_time.date, y = value, fill = variable)) + 
+  ggplot(state.trans.by.day.outputs.reshaped, aes(x = block_time.date, y = value, fill = variable)) + 
     ggtitle("State Transition of Pre-fork BTC and BCH by Number of Outputs\nKEY: {BTC Spent}{BCH Spent} to {BTC Spent}{BCH Spent}") +
     geom_line(aes(color = variable)) + coord_flip() + 
     scale_x_continuous(trans = rev_date, labels = date_format("%b-%Y"), expand = c(0, 0),
       breaks = date.breaks) +
     scale_y_continuous(labels = scales::comma) +
     facet_grid(. ~ variable, labeller = labeller(variable = 
-        c(outputs.uu.to.su = "FF to TF", outputs.uu.to.us = "FF to FT", outputs.uu.to.ss = "FF to TT",
-          outputs.su.to.ss = "TF to TT", outputs.us.to.ss = "FT to TT" ))) +
+        c(outputs.ff.to.tf = "FF to TF", outputs.ff.to.ft = "FF to FT", outputs.ff.to.tt = "FF to TT",
+          outputs.tf.to.tt = "TF to TT", outputs.ft.to.tt = "FT to TT" ))) +
     ylab("Number of Transitioned Outputs per Day") +
     theme(legend.position = "none", axis.title.y = element_blank(),
       strip.text.x = element_text(size = 20), plot.title = element_text(size = 24),

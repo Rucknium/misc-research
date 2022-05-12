@@ -102,61 +102,61 @@ spent.status[, btc.block_time.date := lubridate::date(btc.block_time)]
 # {BTC spent status}{BCH spent status}.to.{BTC spent status}{BCH spent status}
 # u = unspent; s = spent
 
-spent.status[, uu.to.su := as.Date(ifelse(
+spent.status[, ff.to.tf := as.Date(ifelse(
   ifelse(is.na(btc.block_time.date), Inf, btc.block_time.date) < ifelse(is.na(bch.block_time.date), Inf, bch.block_time.date),
   btc.block_time.date, rep(NA, .N)), origin = "1970-01-01")]
 
-spent.status[, uu.to.us := as.Date(ifelse(
+spent.status[, ff.to.ft := as.Date(ifelse(
   ifelse(is.na(bch.block_time.date), Inf, bch.block_time.date) < ifelse(is.na(btc.block_time.date), Inf, btc.block_time.date),
   bch.block_time.date, rep(NA, .N)), origin = "1970-01-01")]
 
-spent.status[, uu.to.ss := as.Date(ifelse(
+spent.status[, ff.to.tt := as.Date(ifelse(
   ifelse(is.na(btc.block_time.date), Inf, btc.block_time.date) == ifelse(is.na(bch.block_time.date), Inf, bch.block_time.date),
   btc.block_time.date, rep(NA, .N)), origin = "1970-01-01")]
 
-spent.status[, su.to.ss := as.Date(ifelse(
-  (! is.na(uu.to.su)) & 
+spent.status[, tf.to.tt := as.Date(ifelse(
+  (! is.na(ff.to.tf)) & 
     ifelse(is.na(bch.block_time.date), Inf, bch.block_time.date) > ifelse(is.na(btc.block_time.date), Inf, btc.block_time.date),
   bch.block_time.date, rep(NA, .N)), origin = "1970-01-01")]
 
-spent.status[, us.to.ss := as.Date(ifelse(
-  (! is.na(uu.to.us)) & 
+spent.status[, ft.to.tt := as.Date(ifelse(
+  (! is.na(ff.to.ft)) & 
     ifelse(is.na(btc.block_time.date), Inf, btc.block_time.date) > ifelse(is.na(bch.block_time.date), Inf, bch.block_time.date),
   btc.block_time.date, rep(NA, .N)), origin = "1970-01-01")]
 
 
-uu.to.su <- spent.status[ (! is.na(uu.to.su)), 
-  .(value.uu.to.su = sum(value, na.rm = TRUE), outputs.uu.to.su = .N), by = uu.to.su]
-names(uu.to.su)[1] <- "block_time.date"
+ff.to.tf <- spent.status[ (! is.na(ff.to.tf)), 
+  .(value.ff.to.tf = sum(value, na.rm = TRUE), outputs.ff.to.tf = .N), by = ff.to.tf]
+names(ff.to.tf)[1] <- "block_time.date"
 
-uu.to.us <- spent.status[ (! is.na(uu.to.us)), 
-  .(value.uu.to.us = sum(value, na.rm = TRUE), outputs.uu.to.us = .N), by = uu.to.us]
-names(uu.to.us)[1] <- "block_time.date"
+ff.to.ft <- spent.status[ (! is.na(ff.to.ft)), 
+  .(value.ff.to.ft = sum(value, na.rm = TRUE), outputs.ff.to.ft = .N), by = ff.to.ft]
+names(ff.to.ft)[1] <- "block_time.date"
 
-uu.to.ss <- spent.status[ (! is.na(uu.to.ss)), 
-  .(value.uu.to.ss = sum(value, na.rm = TRUE), outputs.uu.to.ss = .N), by = uu.to.ss]
-names(uu.to.ss)[1] <- "block_time.date"
+ff.to.tt <- spent.status[ (! is.na(ff.to.tt)), 
+  .(value.ff.to.tt = sum(value, na.rm = TRUE), outputs.ff.to.tt = .N), by = ff.to.tt]
+names(ff.to.tt)[1] <- "block_time.date"
 
-su.to.ss <- spent.status[ (! is.na(su.to.ss)), 
-  .(value.su.to.ss = sum(value, na.rm = TRUE), outputs.su.to.ss = .N), by = su.to.ss]
-names(su.to.ss)[1] <- "block_time.date"
+tf.to.tt <- spent.status[ (! is.na(tf.to.tt)), 
+  .(value.tf.to.tt = sum(value, na.rm = TRUE), outputs.tf.to.tt = .N), by = tf.to.tt]
+names(tf.to.tt)[1] <- "block_time.date"
 
-us.to.ss <- spent.status[ (! is.na(us.to.ss)), 
-  .(value.us.to.ss = sum(value, na.rm = TRUE), outputs.us.to.ss = .N), by = us.to.ss]
-names(us.to.ss)[1] <- "block_time.date"
+ft.to.tt <- spent.status[ (! is.na(ft.to.tt)), 
+  .(value.ft.to.tt = sum(value, na.rm = TRUE), outputs.ft.to.tt = .N), by = ft.to.tt]
+names(ft.to.tt)[1] <- "block_time.date"
 
 
-trans.matrix.prep <- 
+state.trans.by.day <- 
   data.table(block_time.date = sort(unique(lubridate::date(c(spent.status$bch.block_time, spent.status$btc.block_time)))))
 
-trans.matrix.prep <- merge(trans.matrix.prep, uu.to.su, all = TRUE)
-trans.matrix.prep <- merge(trans.matrix.prep, uu.to.us, all = TRUE)
-trans.matrix.prep <- merge(trans.matrix.prep, uu.to.ss, all = TRUE)
-trans.matrix.prep <- merge(trans.matrix.prep, su.to.ss, all = TRUE)
-trans.matrix.prep <- merge(trans.matrix.prep, us.to.ss, all = TRUE)
+state.trans.by.day <- merge(state.trans.by.day, ff.to.tf, all = TRUE)
+state.trans.by.day <- merge(state.trans.by.day, ff.to.ft, all = TRUE)
+state.trans.by.day <- merge(state.trans.by.day, ff.to.tt, all = TRUE)
+state.trans.by.day <- merge(state.trans.by.day, tf.to.tt, all = TRUE)
+state.trans.by.day <- merge(state.trans.by.day, ft.to.tt, all = TRUE)
 
 
-trans.matrix.prep[is.na(trans.matrix.prep)] <- 0
+state.trans.by.day[is.na(state.trans.by.day)] <- 0
 
 
 
@@ -230,7 +230,10 @@ stopifnot(max(outputs.row.sum.check) - min(outputs.row.sum.check) == 0)
 
 
 saveRDS(spent.status.by.day, file = paste0(bch.data.dir, "spent_status_by_day.rds"))
-saveRDS(trans.matrix.prep, file = paste0(bch.data.dir, "trans_matrix_prep.rds"))
+saveRDS(state.trans.by.day, file = paste0(bch.data.dir, "state_trans_by_day.rds"))
+
+write.csv(spent.status.by.day, file = paste0(bch.data.dir, "spent_status_by_day.csv"), row.names = FALSE)
+write.csv(state.trans.by.day, file = paste0(bch.data.dir, "state_trans_by_day.csv"), row.names = FALSE)
 
 
 

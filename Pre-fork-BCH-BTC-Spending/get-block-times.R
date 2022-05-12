@@ -1,4 +1,5 @@
 library(data.table)
+library(rbch)
 
 bitcoin.conf.file <- ""
 # Input filepath for your bitcoin.conf file
@@ -12,7 +13,7 @@ initial.fork.height <- 478558 - 1
 
 # current.block.height <- 733867
 # 733867 is for BCH
- current.block.height <- 729896
+# current.block.height <- 729896
 # 729896 is for BTC
 
 block.times <- vector(length(initial.fork.height:current.block.height), mode ="list")

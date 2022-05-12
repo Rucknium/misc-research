@@ -20,7 +20,7 @@ dir.create(paste0(data.dir, "tx_graphs"))
 bch.config <- rbch::conrpc(bitcoin.conf.file)
 
 # current.block.height <- rbch::getblockchaininfo(bch.config)@result$blocks
-current.block.height <- 733867
+# current.block.height <- 733867
 # 733867 is for BCH
 # current.block.height <- 729896
 # 729896 is for BTC
