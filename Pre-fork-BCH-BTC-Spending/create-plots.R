@@ -63,14 +63,14 @@ spent.status.by.day.value.reshaped[, variable :=
 spent.status.by.day.outputs.reshaped <- melt(spent.status.by.day[, 
   .(block_time.date, outputs.btc.unspent.bch.unspent, outputs.btc.spent.bch.unspent,
     outputs.btc.unspent.bch.spent, outputs.btc.spent.bch.spent)], id.vars = c("block_time.date"),
-  measure.vars = c("outputs.btc.unspent.bch.unspent", "outputs.btc.spent.bch.unspent",
-    "outputs.btc.unspent.bch.spent", "outputs.btc.spent.bch.spent"))
+  measure.vars = c("outputs.btc.unspent.bch.unspent", "outputs.btc.unspent.bch.spent",
+    "outputs.btc.spent.bch.unspent", "outputs.btc.spent.bch.spent"))
 
 
 spent.status.by.day.outputs.reshaped[, block_time.date := as.POSIXct(block_time.date)]
 spent.status.by.day.outputs.reshaped[, variable := 
-    factor(variable, levels = c("outputs.btc.unspent.bch.unspent", "outputs.btc.spent.bch.unspent",
-      "outputs.btc.unspent.bch.spent", "outputs.btc.spent.bch.spent"))]
+    factor(variable, levels = c("outputs.btc.unspent.bch.unspent", "outputs.btc.unspent.bch.spent",
+      "outputs.btc.spent.bch.unspent", "outputs.btc.spent.bch.spent"))]
 
 
 
