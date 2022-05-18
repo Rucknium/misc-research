@@ -19,39 +19,39 @@ library(presize)
 library(knitr)
 
 
-bchn.9Op <- read_ods(P2P.Results.filepath, sheet = "bchn-90p")
-bchn.9Op.start <- read_ods(P2P.Results.filepath, sheet = "bchn_start-90p")
-bchn.Op <- read_ods(P2P.Results.filepath, sheet = "bchn-0p")
-bchn.Op.start <- read_ods(P2P.Results.filepath, sheet = "bchn-start-0p")
+bchn.90p <- read_ods(P2P.Results.filepath, sheet = "bchn-90p")
+bchn.90p.start <- read_ods(P2P.Results.filepath, sheet = "bchn_start-90p")
+bchn.0p <- read_ods(P2P.Results.filepath, sheet = "bchn-0p")
+bchn.0p.start <- read_ods(P2P.Results.filepath, sheet = "bchn-start-0p")
 
-fulcrum.9Op <- read_ods(P2P.Results.filepath, sheet = "fulcrum-90p")
-fulcrum.Op <- read_ods(P2P.Results.filepath, sheet = "fulcrum-0p")
+fulcrum.90p <- read_ods(P2P.Results.filepath, sheet = "fulcrum-90p")
+fulcrum.0p <- read_ods(P2P.Results.filepath, sheet = "fulcrum-0p")
 
-for (i in c("bchn.9Op", "bchn.9Op.start", "bchn.Op", "bchn.Op.start", "fulcrum.9Op", "fulcrum.Op")) {
+for (i in c("bchn.90p", "bchn.90p.start", "bchn.0p", "bchn.0p.start", "fulcrum.90p", "fulcrum.0p")) {
   setDT(get(i))
   setnames(get(i), colnames(get(i)), gsub("[^0-9a-zA-Z]", "", colnames(get(i))) )
 }
 
-block.phases <- data.table(BlockHeight = 0:max(bchn.9Op$BlockHeight), phase = "warmup", stringsAsFactors = FALSE)
+block.phases <- data.table(BlockHeight = 0:max(bchn.90p$BlockHeight), phase = "warmup", stringsAsFactors = FALSE)
 block.phases[BlockHeight %in% 145:244, phase := "empty"]
 block.phases[BlockHeight %in% 245:254, phase := "fan-out"]
 block.phases[BlockHeight %in% 255:259, phase := "steady state 1"]
 block.phases[BlockHeight %in% 260:261, phase := "fan-in"]
 block.phases[BlockHeight %in% 262:266, phase := "steady state 2"]
 
-bchn.9Op <- merge(bchn.9Op, bchn.9Op.start)
-bchn.9Op[, bchn.9Op.elasped.time := as.numeric(as.POSIXlt(CompletedTimestamp) - as.POSIXlt(StartTimestamp))]
+bchn.90p <- merge(bchn.90p, bchn.90p.start)
+bchn.90p[, bchn.90p.elasped.time := as.numeric(as.POSIXlt(CompletedTimestamp) - as.POSIXlt(StartTimestamp))]
 
-bchn.Op <- merge(bchn.Op, bchn.Op.start)
-bchn.Op[, bchn.Op.elasped.time := as.numeric(as.POSIXlt(CompletedTimestamp) - as.POSIXlt(StartTimestamp))]
+bchn.0p <- merge(bchn.0p, bchn.0p.start)
+bchn.0p[, bchn.0p.elasped.time := as.numeric(as.POSIXlt(CompletedTimestamp) - as.POSIXlt(StartTimestamp))]
 
-fulcrum.9Op[, fulcrum.9Op.elasped.time := ProcessingTimemsec]
-fulcrum.Op[, fulcrum.Op.elasped.time := ProcessingTimemsec]
+fulcrum.90p[, fulcrum.90p.elasped.time := ProcessingTimemsec]
+fulcrum.0p[, fulcrum.0p.elasped.time := ProcessingTimemsec]
 
-timing.data <- merge(block.phases, bchn.Op[, .(BlockHeight, bchn.Op.elasped.time)])
-timing.data <- merge(timing.data, bchn.9Op[, .(BlockHeight, bchn.9Op.elasped.time)], all.x = TRUE)
-timing.data <- merge(timing.data, fulcrum.Op[, .(BlockHeight, fulcrum.Op.elasped.time)], all.x = TRUE)
-timing.data <- merge(timing.data, fulcrum.9Op[, .(BlockHeight, fulcrum.9Op.elasped.time)], all.x = TRUE)
+timing.data <- merge(block.phases, bchn.0p[, .(BlockHeight, bchn.0p.elasped.time)])
+timing.data <- merge(timing.data, bchn.90p[, .(BlockHeight, bchn.90p.elasped.time)], all.x = TRUE)
+timing.data <- merge(timing.data, fulcrum.0p[, .(BlockHeight, fulcrum.0p.elasped.time)], all.x = TRUE)
+timing.data <- merge(timing.data, fulcrum.90p[, .(BlockHeight, fulcrum.90p.elasped.time)], all.x = TRUE)
 
 
 timing.data <- timing.data[ ! phase %in% c("warmup", "empty", "fan-in"), ]
