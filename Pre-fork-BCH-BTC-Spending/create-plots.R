@@ -150,10 +150,10 @@ print(
       axis.text = element_text(size = 20), axis.title.x = element_text(size = 20),
       legend.title = element_blank(), legend.text = element_text(size = 14)) + 
     geom_vline(xintercept = as.POSIXct("2017-11-12"), linetype = 3) +
-    geom_text(aes(x = as.POSIXct("2017-11-12"), label = "Max BCH/BTC Exchange Rate",
+    geom_text(aes(x = as.POSIXct("2017-11-12"), label = "Max BTC/BCH Exchange Rate",
       y = 0.75 * sum.value.pre.fork), colour = "black", size = 6, check_overlap = TRUE) + 
     geom_vline(xintercept = as.POSIXct("2017-12-20"), linetype = 3) +
-    geom_text(aes(x = as.POSIXct("2017-12-20"), label = "Max BCH/USD Exchange Rate",
+    geom_text(aes(x = as.POSIXct("2017-12-20"), label = "Max USD/BCH Exchange Rate",
       y = 0.75 * sum.value.pre.fork), colour = "black", size = 6, check_overlap = TRUE) + 
     geom_vline(xintercept = as.POSIXct("2018-11-15"), linetype = 3) +
     geom_text(aes(x = as.POSIXct("2018-11-15"), label = "BSV Hard Fork",
@@ -191,10 +191,10 @@ print(
       axis.text = element_text(size = 20), axis.title.x = element_text(size = 20),
       legend.title = element_blank(), legend.text = element_text(size = 14)) + 
     geom_vline(xintercept = as.POSIXct("2017-11-12"), linetype = 3) +
-    geom_text(aes(x = as.POSIXct("2017-11-12"), label = "Max BCH/BTC Exchange Rate",
+    geom_text(aes(x = as.POSIXct("2017-11-12"), label = "Max BTC/BCH Exchange Rate",
       y = 0.75 * sum.outputs.pre.fork), colour = "black", size = 6, check_overlap = TRUE) + 
     geom_vline(xintercept = as.POSIXct("2017-12-20"), linetype = 3) +
-    geom_text(aes(x = as.POSIXct("2017-12-20"), label = "Max BCH/USD Exchange Rate",
+    geom_text(aes(x = as.POSIXct("2017-12-20"), label = "Max USD/BCH Exchange Rate",
       y = 0.75 * sum.outputs.pre.fork), colour = "black", size = 6, check_overlap = TRUE) + 
     geom_vline(xintercept = as.POSIXct("2018-11-15"), linetype = 3) +
     geom_text(aes(x = as.POSIXct("2018-11-15"), label = "BSV Hard Fork",
