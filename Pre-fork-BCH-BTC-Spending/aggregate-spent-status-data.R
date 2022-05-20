@@ -88,7 +88,7 @@ colnames(btc.block.times) <- c("btc.spent.block_height", "btc.block_time")
 spent.status <- merge(spent.status, btc.block.times, all = TRUE, by = "btc.spent.block_height")
 
 
-write.csv(spent.status, file = paste0(bch.data.dir, "spent_status-test.csv"), row.names = FALSE)
+write.csv(spent.status, file = paste0(bch.data.dir, "pre-fork-BTC-BCH-spent_status.csv"), row.names = FALSE)
 
 
 spent.status[, bch.block_time.date := lubridate::date(bch.block_time)]
