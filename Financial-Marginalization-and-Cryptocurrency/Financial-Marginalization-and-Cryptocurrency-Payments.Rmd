@@ -116,11 +116,11 @@ SHED$crypto.used.as.payment <- SHED$S16_b == "Yes"
 # Do you and/or your spouse or partner
 # currently have a checking, savings or money
 # market account?
-SHED$does.not.have.bank.account <- SHED$BK1 == "No"
+SHED$lacks.bank.account <- SHED$BK1 == "No"
 
 # C2A
 # Do you currently have at least one credit card?
-SHED$does.not.have.credit.card <- SHED$C2A == "No"
+SHED$lacks.credit.card <- SHED$C2A == "No"
 
 # ppgender
 # Gender [Ipsos source]
@@ -308,7 +308,7 @@ SHED <- svydesign(ids = ~0, data = SHED, weights = SHED$weight_pop)
 
 
 svyvar.covariance <- svyvar(~ age + is.male + crypto.used.as.payment +
-    does.not.have.bank.account + does.not.have.credit.card, SHED, na.rm = TRUE)
+    lacks.bank.account + lacks.credit.card, SHED, na.rm = TRUE)
 attr(svyvar.covariance, "var") <- NULL
 svyvar.correlation <- cov2cor(as.matrix(svyvar.covariance))
 
@@ -316,29 +316,29 @@ print(round(svyvar.correlation, 3))
 
 corrplot(svyvar.correlation, tl.col = "darkred", tl.srt = 35, 
   method = "shade", number.digits = 2, addshade = "all", diag = FALSE,
-         title = "\n\n Correlation Plot",
+         title = "\n\n Correlation Matrix of Financial Marginalization\nand Use of Cryptocurrency as a Means of Payment",
          addCoef.col = "black", type = "lower")
 
 ```
 
 # Main results
 
-## does.not.have.bank.account
+## lacks.bank.account
 
-```{r main-results-does-not-have-bank-account}
+```{r main-results-lacks-bank-account}
 
-svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + does.not.have.bank.account, 
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + lacks.bank.account, 
   SHED, family = stats::quasibinomial(link = "logit"))
 summary(svyglm.fit)
-or_svyglm(SHED$variables$variables, svyglm.fit, incr = list(age = 1))
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
 
 ```
 
-## does.not.have.credit.card
+## lacks.credit.card
 
-```{r main-results-does-not-have-credit-card}
+```{r main-results-lacks-credit-card}
 
-svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + does.not.have.credit.card, 
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + lacks.credit.card, 
   SHED, family = stats::quasibinomial(link = "logit"))
 summary(svyglm.fit)
 or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
