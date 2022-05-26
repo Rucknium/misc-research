@@ -5,29 +5,686 @@ date: '2022-05-26'
 output: html_document
 ---
 
+```{css, echo=FALSE}
+body .main-container {
+  max-width: 1480px !important;
+  width: 1480px !important;
+}
+body {
+  max-width: 1480px !important;
+}
+```
+
+
+
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-# SURVEY OF HOUSEHOLD ECONOMICS AND DECISIONMAKING
+knitr::opts_chunk$set(echo = TRUE, size = "small", tidy = FALSE)
+options(width = 170)
+
+
+
+# or_glm function adapted from "oddsratio" package so it can
+# handle svyglm functions:
+
+or_svyglm <- function (data, model, incr, ci = 0.95) 
+{
+  if (any(class(model) %in% "glm")) {
+    preds <- names(coefficients(model))[2:length(coefficients(model))]
+    coef <- coefficients(model)[2:length(coefficients(model))]
+  }
+  increments <- list()
+  odds_ratios <- list()
+  ci_low <- list()
+  ci_high <- list()
+  for (i in preds) {
+    if (any(class(model) %in% "glm")) {
+      ci_list <- data.frame(suppressMessages(confint(model, 
+        level = ci)))[-1, ]
+    }
+    if (is.numeric(data[[i]]) | is.integer(data[[i]])) {
+      odds_ratios[[i]] <- round(exp(as.numeric(coef[[i]]) * 
+          as.numeric(incr[[i]])), 3)
+      if (!class(model)[1] == "glmmPQL") {
+        ci_low[[i]] <- round(exp(ci_list[i, 1] * as.numeric(incr[[i]])), 
+          3)
+        ci_high[[i]] <- round(exp(ci_list[i, 2] * as.numeric(incr[[i]])), 
+          3)
+      }
+      increments[[i]] <- as.numeric(incr[[i]])
+      or <- odds_ratios[[i]]
+    }
+    else {
+      odds_ratios[[i]] <- round(exp(as.numeric(coef[[i]])), 
+        3)
+      if (!class(model)[1] == "glmmPQL") {
+        ci_low[[i]] <- round(exp(ci_list[i, 1]), 3)
+        ci_high[[i]] <- round(exp(ci_list[i, 2]), 3)
+      }
+      increments[[i]] <- "Indicator variable"
+      or <- odds_ratios[[i]]
+    }
+  }
+  result <- data.frame(predictor = names(odds_ratios), oddsratio = unlist(odds_ratios, 
+    use.names = FALSE), ci_low = unlist(ci_low, use.names = FALSE), 
+    ci_high = unlist(ci_high, use.names = FALSE), increment = unlist(increments, 
+      use.names = FALSE))
+  if (any(class(model) %in% "glm")) {
+    col_names <- gsub("\\.\\.", replacement = "", names(ci_list))
+    col_names <- gsub("X", replacement = "", col_names)
+    colnames(result)[3] <- paste0("ci_low (", col_names[1], 
+      ")")
+    colnames(result)[4] <- paste0("ci_high (", col_names[2], 
+      ")")
+  }
+  return(result)
+}
+
+```
+
+## Load packages
+
+```{r load-packages}
+# install.packages("readstata13")
+# install.packages("survey")
+# install.packages("corrplot")
+
+library(readstata13)
+library(survey)
+library(corrplot)
+
+```
+
+
+## Download and import data
+
+```{r get-data}
+
+# download.file("https://www.federalreserve.gov/consumerscommunities/files/SHED_public_use_data_2021_(Stata).zip", 
+#   "data/SHED_public_use_data_2021_(Stata).zip")
+# unzip("data/SHED_public_use_data_2021_(Stata).zip", exdir = "data")
+
+
+SHED <- readstata13::read.dta13("data/public2021.dta", generate.factors = TRUE, nonint.factors = TRUE)
+
+# S16_b
+# In the past year, have you done the following
+# with cryptocurrency, such as Bitcoin or Ethereum?
+# - Used to buy something or make a payment
+SHED$crypto.used.as.payment <- SHED$S16_b == "Yes"
+
+# BK1
+# Do you and/or your spouse or partner
+# currently have a checking, savings or money
+# market account?
+SHED$does.not.have.bank.account <- SHED$BK1 == "No"
+
+# C2A
+# Do you currently have at least one credit card?
+SHED$does.not.have.credit.card <- SHED$C2A == "No"
+
+# ppgender
+# Gender [Ipsos source]
+SHED$is.male <- SHED$ppgender == "Male"
+
+# race_5cat Race 5 categories
+SHED$race <- SHED$race_5cat
+
+# ED0
+# What is the highest level of school you have
+# completed or the highest degree you have
+# received?
+SHED$education.level <- relevel(SHED$ED0, "High school degree or GED")
+
+# ED1
+# Which one of the following broad categories
+# best describes your (current/most recent)
+# educational program?
+SHED$education.subject <- relevel(SHED$ED1, "Business/management")
+
+# pppa_lgb [Ipsos source]
+# Q230: Which of the following best describes how you think of yourself?
+SHED$lgbtq <- relevel(SHED$pppa_lgb, "Straight, that is, not gay")
+
+# ppp20197 [Ipsos source]
+# QEG22: Are you a citizen of the United States?
+SHED$is.noncitizen <- SHED$ppp20197 == "No"
+
+# I40
+# Which of the following categories best
+# describes the total income that you and/or
+# your spouse or partner received from all
+# sources, before taxes and deductions, in the
+# past 12 months?
+SHED$income.category <- SHED$I40
+
+# B2
+# Overall, which one of the following best
+# describes how well you are managing
+# financially these days?
+SHED$overall.financial.wellbeing <- SHED$B2
+
+# I41_b
+# Supplemental Nutrition Assistance Program
+# (SNAP or food stamps) - In the past 12
+# months, have you received any of the
+# following?
+SHED$received.food.stamps <- SHED$I41_b
+
+# FL0
+# On a scale from zero to ten, where zero is
+# not at all willing to take risks and ten is
+# very willing to take risks, what number would
+# you be on the scale?
+
+SHED$risk.tolerance <- as.numeric(SHED$FL0) - 1
+
+# B10
+# Overall, on a scale from zero to ten, where
+# zero is not at all satisfied and ten is
+# completely satisfied, how satisfied are you
+# with life as a whole these days?
+SHED$life.satisfaction <- as.numeric(SHED$B10) - 1
+
+# ppage
+# Age [Ipsos source]
+# ppcmdate
+# Date member completed Core survey
+# Must correct age variable for time of initial Ipsos survey
+SHED$age <- SHED$ppage + (2021 - as.numeric(substr(SHED$ppcmdate, 1, 4)))
+
+# ind1
+# IND1: Industry (tight scale) in current or main job
+SHED$job.industry <- relevel(SHED$ind1, "Retail/Stores/Shopping (including Online Retail)")
+
+# ppcm0160 [Ipsos source]
+# Q26: Occupation (detailed) in current or main job
+SHED$job.occupation <- relevel(SHED$ppcm0160, "Retail Sales")
+
+# ppcm1301 [Ipsos source]
+# GOVEMP1: Employer type
+SHED$employer.type <- relevel(SHED$ppcm1301, "Private-for-profit company")
+
+# ppmsacat
+# MSA Status [Ipsos source]
+SHED$resides.in.metro.statistical.area <- SHED$ppmsacat == "Metro"
+
+# ppfs0596 [Ipsos source]
+# Q22: What is the approximate total amount of
+# your household's savings and investments?
+SHED$total.household.savings <- relevel(SHED$ppfs0596, "$100,000 - $249,999")
+
+# A1_a
+# In the past 12 months, has each of the following happened to you:
+# - Turned down for credit
+SHED$rejected.for.credit <- SHED$A1_a == "Yes"
+
+# BK2_a
+# In the past 12 months, did you and/or spouse or partner:
+# - Purchase a money order from a place other than a bank
+SHED$purchase.non.bank.money.order <- SHED$BK2_a == "Yes"
+
+# BK2_b
+# In the past 12 months, did you and/or spouse or partner:
+# - Cash a check at a place other than a bank
+SHED$cash.check.non.bank <- SHED$BK2_b == "Yes"
+
+# BK2_c
+# In the past 12 months, did you and/or spouse or partner:
+# - Take out a payday loan or payday advance
+SHED$take.payday.loan <- SHED$BK2_c == "Yes"
+
+# BK2_d
+# In the past 12 months, did you and/or spouse or partner:
+# - Take out a pawn shop loan or an auto title loan
+SHED$take.auto.or.pawn.shop.loan <- SHED$BK2_d == "Yes"
+
+# BK2_e
+# In the past 12 months, did you and/or spouse or partner:
+# - Obtain a tax refund advance to receive your refund faster
+SHED$take.tax.refund.advance <- SHED$BK2_e == "Yes"
+
+# BNPL1
+# In the past year, have you used a “Buy Now
+# Pay Later” service to buy something?
+SHED$used.buy.now.pay.later <- SHED$BNPL1 == "Yes"
+
+# ppfs1482 [Ipsos source]
+# Q108: Where do you think your credit score falls
+SHED$perceived.credit.score <- relevel(SHED$ppfs1482, "Fair")
+
+# GE2A
+# Some people earn money by selling items at
+# places like flea markets and garage sales or
+# through online marketplaces like eBay or
+# Etsy. In the past month, have you made money
+# by selling items in any of these ways?
+
+SHED$informal.selling.of.goods <- SHED$GE2A == "Yes"
+
+# GE1A
+# In the past month, have you done any
+# freelance or gig-work, either to supplement
+# your income or as your main job?
+
+SHED$freelance.or.gig.work <- SHED$GE1A == "Yes"
+
+# E7
+# During the past 12 months, have you
+# personally experienced discrimination or
+# unfair treatment because of your race,
+# ethnicity, age, religion, disability status,
+# sexual orientation, gender, or gender
+# identity?
+SHED$experienced.discrimination <- SHED$E7 == "Yes"
+
+# E8_b 
+# In the past 12 months, did you personally experience
+# discrimination or unfair treatment while
+# doing any of the following?
+# - Banking or applying for a loan
+SHED$experienced.discrimination.in.banking <- SHED$E8_b %in% "Yes"
+
+# xlaptop
+# Is R a KP laptop user?
+SHED$is.kp.laptop.user <- SHED$xlaptop %in% "Yes"
+
+# devicetype2
+# DOV: Device Type - at the end of survey
+SHED$respondent.device.type <- relevel(SHED$devicetype2, "WinPC")
+
+
+SHED <- svydesign(ids = ~0, data = SHED, weights = SHED$weight_pop)
+
+# weight_pop used as survey weights, in accordance with suggestion by:
+# https://www.federalreserve.gov/consumerscommunities/files/SHED_2021codebook.pdf
 
 
 ```
 
-## R Markdown
+## Checking correlations between main variables
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+```{r initial-correlations}
 
-```{r cars}
-summary(cars)
+
+svyvar.covariance <- svyvar(~ age + is.male + crypto.used.as.payment +
+    does.not.have.bank.account + does.not.have.credit.card, SHED, na.rm = TRUE)
+attr(svyvar.covariance, "var") <- NULL
+svyvar.correlation <- cov2cor(as.matrix(svyvar.covariance))
+
+print(round(svyvar.correlation, 3))
+
+corrplot(svyvar.correlation, tl.col = "darkred", tl.srt = 35, 
+  method = "shade", number.digits = 2, addshade = "all", diag = FALSE,
+         title = "\n\n Correlation Plot",
+         addCoef.col = "black", type = "lower")
+
 ```
 
-## Including Plots
+# Main results
 
-You can also embed plots, for example:
+## does.not.have.bank.account
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+```{r main-results-does-not-have-bank-account}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + does.not.have.bank.account, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables$variables, svyglm.fit, incr = list(age = 1))
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## does.not.have.credit.card
+
+```{r main-results-does-not-have-credit-card}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + does.not.have.credit.card, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+
+```
+
+# Additional results on financial marginalization
+
+## rejected.for.credit
+
+```{r other-financial-marginalization-rejected-for-credit}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + rejected.for.credit, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## purchase.non.bank.money.order
+
+```{r other-financial-marginalization-purchase-non-bank-money-order}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + purchase.non.bank.money.order, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## cash.check.non.bank
+
+```{r other-financial-marginalization-cash-check-non-bank}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + cash.check.non.bank, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## take.payday.loan
+
+```{r other-financial-marginalization-take-payday-loan}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + take.payday.loan, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## take.auto.or.pawn.shop.loan
+
+```{r other-financial-marginalization-take-auto-or-pawn-shop-loan}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + take.auto.or.pawn.shop.loan, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## take.tax.refund.advance
+
+```{r other-financial-marginalization-take-tax-refund-advance}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + take.tax.refund.advance, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## used.buy.now.pay.later
+
+```{r other-financial-marginalization-used-buy-now-pay-later}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + used.buy.now.pay.later, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## experienced.discrimination.in.banking
+
+```{r other-financial-marginalization-experienced-discrimination-in-banking}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + experienced.discrimination.in.banking, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## perceived.credit.score
+
+```{r other-financial-marginalization-perceived-credit-score}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + perceived.credit.score, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+# General societal marginalization
+
+## experienced.discrimination
+
+```{r general-societal-marginalization-experienced-discrimination}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + experienced.discrimination, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## race
+
+```{r general-societal-marginalization-race}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + race, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## is.noncitizen
+
+```{r general-societal-marginalization-is.noncitizen}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + is.noncitizen, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## lgbtq
+
+```{r general-societal-marginalization-lgbtq}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + lgbtq, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+# Data quality sanity checks
+
+## education.subject
+
+```{r data-quality-checks-education-subject}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + education.subject, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## job.industry
+
+```{r data-quality-checks-job-industry}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + job.industry, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## job.occupation
+
+```{r data-quality-checks-job-occupation}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + job.occupation, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## risk.tolerance
+
+```{r data-quality-checks-risk-tolerance}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + risk.tolerance, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1, risk.tolerance = 1))
+
+
+```
+
+
+# Miscellaneous
+
+## education.level
+
+```{r miscellaneous-education-level}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + education.level, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## income.category
+
+```{r miscellaneous-income-category}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + income.category, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## total.household.savings
+
+```{r miscellaneous-total-household-savings}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + total.household.savings, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## overall.financial.wellbeing
+
+```{r miscellaneous-overall-financial-wellbeing}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + overall.financial.wellbeing, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## received.food.stamps
+
+```{r miscellaneous-received-food-stamps}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + received.food.stamps, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## life.satisfaction
+
+```{r miscellaneous-life-satisfaction}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + life.satisfaction, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1, life.satisfaction = 1))
+
+```
+
+## employer.type
+
+```{r miscellaneous-employer-type}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + employer.type, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## employer.type = Self-employed & job.occupation = Computer and Mathematical
+
+```{r miscellaneous-self-employed-computer-industry}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male +
+    I(employer.type == "Self-employed") * I(job.occupation == "Computer and Mathematical"), 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+print(or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1)))
+
+```
+
+## informal.selling.of.goods
+
+```{r miscellaneous-informal-selling-of-goods}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + informal.selling.of.goods, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## freelance.or.gig.work
+
+```{r miscellaneous-freelance-or-gig-work}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + freelance.or.gig.work, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## resides.in.metro.statistical.area
+
+```{r miscellaneous-resides-in-metro-statistical-area}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + resides.in.metro.statistical.area, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## respondent.device.type
+
+```{r miscellaneous-respondent-device-type}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + respondent.device.type, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+```
+
+## is.kp.laptop.user
+
+```{r miscellaneous-is-kp-laptop-user}
+
+svyglm.fit <- svyglm(crypto.used.as.payment ~ age + is.male + is.kp.laptop.user, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+summary(svyglm.fit)
+or_svyglm(SHED$variables, svyglm.fit, incr = list(age = 1))
+
+
+```
+
