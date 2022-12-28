@@ -74,7 +74,7 @@ while(length(tx.pool) == 0) {
   tx.pool <- xmr.rpc(paste0(url.rpc, "/get_transaction_pool"))$transactions
   
   if (length(tx.pool) > 0 && tx.pool[[1]]$receive_time == 0) {
-    error("Transaction receive_time is missing. Possible solution: remove '--restricted-rpc' monerod flag.")
+    stop("Transaction receive_time is missing. Possible solution: remove '--restricted-rpc' monerod flag.")
   }
   Sys.sleep(1)
 }
