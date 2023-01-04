@@ -80,6 +80,24 @@ xmr.rpc <- function(
   RJSONIO::fromJSON(rcp.ret, asText = TRUE) # , simplify = FALSE
 }
 
+
+get.coinbase.tx.size <- function(miner_tx_hash) {
+  
+  rcp.ret <- RCurl::postForm("http://127.0.0.1:18081/get_transactions",
+    .opts = list(
+      postfields = paste0('{"txs_hashes":["', miner_tx_hash, '"]}'),
+      httpheader = c('Content-Type' = 'application/json', Accept = 'application/json')
+    )
+  )
+  
+  rcp.ret <- RJSONIO::fromJSON(rcp.ret, asText = TRUE)
+  nchar(rcp.ret$txs[[1]]$pruned_as_hex) / 2
+  # Reference:
+  # https://libera.monerologs.net/monero-dev/20221231
+  # https://github.com/monero-project/monero/pull/8691
+  # https://github.com/monero-project/monero/issues/8311
+}
+
 cat("\nmonero-blockchain-stats starting to gather aggregate tx output data...\n")
 
 blockchain.stats <- system(paste0(blockchain.stats.utility.location, 
@@ -100,17 +118,21 @@ blocks <- block.start:block.stop
 detect.p2pool <- vector("list", length(blocks))
 
 for (i in seq_along(blocks)) {
-  block.data <- RJSONIO::fromJSON(
-    xmr.rpc(method = "get_block",
-      params = list(height = blocks[i]))$result$json,
-    asText = TRUE)
+  
+  block.data <- xmr.rpc(method = "get_block",
+    params = list(height = blocks[i]))$result
+  
+  miner_tx_hash <- block.data$miner_tx_hash
+  
+  block.data <- RJSONIO::fromJSON(block.data$json, asText = TRUE)
   
   detect.p2pool[[i]] <- data.table::data.table(
     block_height = blocks[i],
     timestamp = block.data$timestamp,
     is_p2pool = grepl("(X3X32X)|(X3X32$)", paste0(block.data$miner_tx$extra, collapse = "X")),
-    # tx_extra with "3" followed buy "32" indicates merge mining with p2pool
-    n_outputs = length(block.data$miner_tx$vout)
+    # tx_extra with "3" followed by "32" indicates merge mining with p2pool
+    n_outputs = length(block.data$miner_tx$vout),
+    tx_size_bytes = get.coinbase.tx.size(miner_tx_hash)
   )
   if (blocks[i] %% 1000 == 0) {
     cat("Block", blocks[i], "processed\n")
@@ -121,7 +143,6 @@ detect.p2pool <- data.table::rbindlist(detect.p2pool)
 
 detect.p2pool$is_p2pool[detect.p2pool$n_outputs == 1] <- FALSE
 # Remove false positives
-
 
 write.csv(blockchain.stats, paste0("blockchain-stats-", block.start, "-to-", block.stop, ".csv"), row.names = FALSE)
 cat("\n", paste0("blockchain-stats-", block.start, "-to-", block.stop, ".csv"), " created\n", sep = "")
@@ -138,8 +159,16 @@ print(summary(detect.p2pool$n_outputs[detect.p2pool$is_p2pool]))
 
 cat("Total number of transaction outputs: ",
   formatC(round(sum(blockchain.stats$OutTotal)), format = "f", big.mark = ",", digits = 0), "\n", sep = "")
+
 cat("Number of p2pool payout transaction outputs: ",
   formatC(sum(detect.p2pool$n_outputs[detect.p2pool$is_p2pool]), format = "f", big.mark = ",", digits = 0),
   " (", round(100 * sum(detect.p2pool$n_outputs[detect.p2pool$is_p2pool]) / sum(blockchain.stats$OutTotal), 2), "% of total)", "\n", sep ="")
+
+cat("Total number of bytes (i.e. blockchain size on disk) within chosen blocks interval: ",
+  formatC(round(sum(blockchain.stats$Bytes_per_Day)), format = "f", big.mark = ",", digits = 0), "\n", sep = "")
+
+cat("Total number of bytes of p2pool coinbase transactions: ",
+  formatC(sum(detect.p2pool$tx_size_bytes[detect.p2pool$is_p2pool]), format = "f", big.mark = ",", digits = 0),
+  " (", round(100 * sum(detect.p2pool$tx_size_bytes[detect.p2pool$is_p2pool]) / sum(blockchain.stats$Bytes_per_Day), 2), "% of total)", "\n", sep ="")
 
 
