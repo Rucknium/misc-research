@@ -31,6 +31,7 @@ xmr.rpc <- function(
   num.as.string = FALSE,
   nonce.as.string = FALSE,
   keep.trying.rpc = FALSE,
+  curl = RCurl::getCurlHandle(),
   ...
 ){
   
@@ -49,7 +50,8 @@ xmr.rpc <- function(
       postfields = json.ret,
       httpheader = c('Content-Type' = 'application/json', Accept = 'application/json')
       # https://stackoverflow.com/questions/19267261/timeout-while-reading-csv-file-from-url-in-r
-    )
+    ),
+    curl = curl
   ), error = function(e) {NULL})
   
   if (keep.trying.rpc && length(rcp.ret) == 0) {
@@ -60,7 +62,8 @@ xmr.rpc <- function(
           postfields = json.ret,
           httpheader = c('Content-Type' = 'application/json', Accept = 'application/json')
           # https://stackoverflow.com/questions/19267261/timeout-while-reading-csv-file-from-url-in-r
-        )
+        ),
+        curl = curl
       ), error = function(e) {NULL})
     }
   }
@@ -81,13 +84,14 @@ xmr.rpc <- function(
 }
 
 
-get.coinbase.tx.size <- function(miner_tx_hash) {
+get.coinbase.tx.size <- function(miner_tx_hash, curl = RCurl::getCurlHandle()) {
   
   rcp.ret <- RCurl::postForm("http://127.0.0.1:18081/get_transactions",
     .opts = list(
       postfields = paste0('{"txs_hashes":["', miner_tx_hash, '"]}'),
       httpheader = c('Content-Type' = 'application/json', Accept = 'application/json')
-    )
+    ),
+    curl = curl
   )
   
   rcp.ret <- RJSONIO::fromJSON(rcp.ret, asText = TRUE)
@@ -117,14 +121,18 @@ blocks <- block.start:block.stop
 
 detect.p2pool <- vector("list", length(blocks))
 
+curl.handle <- RCurl::getCurlHandle()
+
 for (i in seq_along(blocks)) {
   
   block.data <- xmr.rpc(method = "get_block",
-    params = list(height = blocks[i]))$result
+    params = list(height = blocks[i]), curl = curl.handle)$result
   
   miner_tx_hash <- block.data$miner_tx_hash
   
   block.data <- RJSONIO::fromJSON(block.data$json, asText = TRUE)
+  
+  coinbase.tx.size <- get.coinbase.tx.size(miner_tx_hash, curl = curl.handle)
   
   detect.p2pool[[i]] <- data.table::data.table(
     block_height = blocks[i],
@@ -132,7 +140,7 @@ for (i in seq_along(blocks)) {
     is_p2pool = grepl("(X3X32X)|(X3X32$)", paste0(block.data$miner_tx$extra, collapse = "X")),
     # tx_extra with "3" followed by "32" indicates merge mining with p2pool
     n_outputs = length(block.data$miner_tx$vout),
-    tx_size_bytes = get.coinbase.tx.size(miner_tx_hash)
+    tx_size_bytes = coinbase.tx.size
   )
   if (blocks[i] %% 1000 == 0) {
     cat("Block", blocks[i], "processed\n")
