@@ -53,7 +53,7 @@ xmr.blockchain <- merge(xmr.blockchain, p2pool.sim.confirm, by = "canon.receive_
 
 xmr.blockchain[, mean(canon.block_receive_time - p2pool.sim.confirm.time, na.rm = TRUE)]
 
-block.reward <- unique(xmr.blockchain[, .(block_reward, Pool, is_p2pool)])
+block.reward <- unique(xmr.blockchain[, .(block_height, block_reward, Pool, is_p2pool)])
 
 
 block.reward[, mean(block_reward, na.rm = TRUE) / 1e12, by = "Pool"]
