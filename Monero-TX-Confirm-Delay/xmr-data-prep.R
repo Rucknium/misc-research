@@ -81,41 +81,41 @@ for (i in datasets[-1]) {
   mempool <- merge(mempool, mempool.collection[[i]], all = TRUE)
 }
 
-mempool$canon.receive_time <- apply(mempool[, grepl("receive_time[.]", colnames(mempool))], 1,
+mempool$canon.receive_time <- apply(mempool[, grepl("receive_time[.]", colnames(mempool)), drop = FALSE], 1,
   function(x) {tx.time.fn(x, na.rm = TRUE)} )
 
-blocks$canon.block_receive_time <- apply(blocks[, grepl("block_receive_time[.]", colnames(blocks))], 1,
+blocks$canon.block_receive_time <- apply(blocks[, grepl("block_receive_time[.]", colnames(blocks)), drop = FALSE], 1,
   function(x) {block.time.fn(x, na.rm = TRUE)} )
 
-mempool$canon.fee <- apply(mempool[, grepl("fee[.]", colnames(mempool))], 1,
+mempool$canon.fee <- apply(mempool[, grepl("fee[.]", colnames(mempool)), drop = FALSE], 1,
   function(x) {unique(x[!is.na(x)])} )
 # Fee is part of the data hashed for the transaction ID, so there should
 # never be more than one unique fee for a given tx ID. Source:
 # Section 7.4.1 of Zero to Monero 2.0
 
-mempool$canon.weight <- apply(mempool[, grepl("weight[.]", colnames(mempool))], 1,
+mempool$canon.weight <- apply(mempool[, grepl("weight[.]", colnames(mempool)), drop = FALSE], 1,
   function(x) {unique(x[!is.na(x)])} )
 # Weight is implicitly part of the data hashed for the transaction ID, so there should
 # never be more than one unique weight for a given tx ID. Source:
 # https://libera.monerologs.net/monero-dev/20230112#c188158
 
 
-check.block.heights.duplicated <- apply(blocks[, grepl("block_height[.]", colnames(blocks))], 2,
+check.block.heights.duplicated <- apply(blocks[, grepl("block_height[.]", colnames(blocks)), drop = FALSE], 2,
   function(x) {sum(duplicated(x, incomparables = NA))})
 # Check if there are "duplicate" heights, i.e. two block hashes with the same height,
 # which would suggest blockchain re-orgs
 stopifnot(all(check.block.heights.duplicated == 0))
 
-check.block.heights.unique <- apply(blocks[, grepl("block_height[.]", colnames(blocks))], 1,
+check.block.heights.unique <- apply(blocks[, grepl("block_height[.]", colnames(blocks)), drop = FALSE], 1,
   function(x) {uniqueN(x, na.rm = TRUE)})
 # Check if there are any differences in block height between same block hashes,
 # which would suggest blockchain re-orgs
 stopifnot(all(check.block.heights.unique == 1))
 
-blocks$block_height <- apply(blocks[, grepl("block_height[.]", colnames(blocks))], 1,
+blocks$block_height <- apply(blocks[, grepl("block_height[.]", colnames(blocks)), drop = FALSE], 1,
   function(x) {unique(na.omit(x), incomparables = NA)})
 
-block_height.unique <- na.omit(unique(unlist(blocks[, grepl("block_height[.]", colnames(blocks))])))
+block_height.unique <- na.omit(unique(unlist(blocks[, grepl("block_height[.]", colnames(blocks)), drop = FALSE])))
 
 all.blocks <- min(block_height.unique[block_height.unique > 0]):max(block_height.unique)
 # min():max() since some blocks are "skipped"
@@ -266,7 +266,7 @@ blockchain.data[is.na(Pool), Pool := "other"]
 blockchain.data[(is_p2pool), Pool := "P2Pool"]
 
 max.receive_time.range <- apply(blockchain.data[, 
-  grepl("^receive_time[.]", colnames(blockchain.data)), with = FALSE], 1, 
+  grepl("^receive_time[.]", colnames(blockchain.data)), with = FALSE, drop = FALSE], 1, 
   function(x) {diff(range(x))})
 
 cat("xmr max.receive_time.range\n")
@@ -276,7 +276,7 @@ cat("Quantiles:\n")
 print(quantile(max.receive_time.range, probs = sort(c(0.05, 0.95, (0:10)/10)), na.rm = TRUE))
 
 max.block.receive_time.range <- apply(blocks[, 
-  grepl("^block_receive_time[.]", colnames(blocks))], 1, 
+  grepl("^block_receive_time[.]", colnames(blocks)), drop = FALSE], 1, 
   function(x) {diff(range(x))})
 
 cat("xmr max.block.receive_time.range\n")
