@@ -3,9 +3,10 @@
 
 library(data.table)
 
-current.height <- 2847180
-# 2847180 is last block of March 21, 2023
+current.height <- NA
 # current.height should be the most recent height that you want to collect data for
+
+stopifnot(!is.na(current.height))
 
 block.heights <- 1220516:current.height
 # 1220516 is hard fork height that allowed the first RingCT transactions
@@ -152,15 +153,42 @@ system.time({
         
         output.amounts <- sapply(tx.json$vout, FUN = function(x) {x$amount})
         
+        tx_size_bytes <- ifelse(i == 1,
+          nchar(rcp.ret$txs[[i]]$pruned_as_hex) / 2,
+          nchar(rcp.ret$txs[[i]]$as_hex) / 2)
+        # Coinbase has special structure
+        # Reference:
+        # https://libera.monerologs.net/monero-dev/20221231
+        # https://github.com/monero-project/monero/pull/8691
+        # https://github.com/monero-project/monero/issues/8311
+
+        tx_fee <- ifelse(i == 1 || is.null(tx.json$rct_signatures), NA, tx.json$rct_signatures$txnFee)
+        # missing non-RingCT tx fee
+        
+        is.mordinal <-
+          height >= 2838965 &&
+          length(tx.json$vout) == 2 &&
+          i > 1 && # not the first tx, which is the coinbase tx
+          length(tx.json$extra) > 44 &&
+          tx.json$extra[45] == 16
+        # With "&&", evaluates each expression sequentially until it is false (if ever). Then stops.
+        # If all are TRUE, then returns true.
+        
         output.index.collected[[i]] <- data.table(
           block_height = height,
           block_timestamp = block.data$block_header$timestamp,
+          block_size = block.data$block_size,
+          block_reward = block.data$reward,
           tx_num = i,
           tx_hash = txs.to.collect[i],
+          tx_version = tx.json$version,
+          tx_fee = tx_fee,
+          tx_size_bytes = tx_size_bytes,
           output_num = seq_along(rcp.ret$txs[[i]]$output_indices),
           output_index = rcp.ret$txs[[i]]$output_indices,
           output_amount = output.amounts,
-          output_unlock_time = tx.json$unlock_time)
+          output_unlock_time = tx.json$unlock_time,
+          is_mordinal = is.mordinal)
         
         
         if (i == 1L) { next }
@@ -233,41 +261,31 @@ setnames(rings, c("block_height", "block_timestamp"),
 
 output.index[, output_amount_for_index := ifelse(tx_num == 1, 0, output_amount)]
 
+output.index <- output.index[ !(tx_num == 1 & tx_version == 1), ]
+# Remove coinbase outputs that are ineligible for use in a RingCT ring
+# See https://libera.monerologs.net/monero-dev/20230323#c224570
+
+
+
 xmr.rings <- merge(rings, output.index[, .(block_height, block_timestamp, tx_num, output_num,
-  output_index, output_amount, output_amount_for_index, output_unlock_time)],
+  output_index, output_amount, output_amount_for_index, output_unlock_time, is_mordinal)],
   # only dont need tx_hash column from output.index
   by.x = c("input_amount", "output_index"),
   by.y = c("output_amount_for_index", "output_index")) #, all = TRUE)
 
 
-
+xmr.rings <- xmr.rings[input_amount == 0, ]
+# Remove non-RingCT rings
 
 xmr.rings[, num_times_referenced := .N, by = "output_index"]
 
-coinbase.ring.members <- xmr.rings[, .(n.coinbase.ring.members = sum(tx_num == 1), ring.size = .N), 
-  by = c("tx_hash", "input_num", "block_timestamp_ring")]
 
-coinbase.ring.members[, share.coinbase.ring.members := n.coinbase.ring.members/ring.size]
-coinbase.ring.members[, effective.ring.size := ring.size - n.coinbase.ring.members]
-coinbase.ring.members[, block_timestamp_ring.date := as.POSIXct(block_timestamp_ring, origin = "1970-01-01")]
+output.index.date <- unique(output.index[, .(block_timestamp = block_timestamp)])
 
-coinbase.ring.members.date <- unique(coinbase.ring.members[, .(block_timestamp_ring.date = block_timestamp_ring.date)])
+output.index.date[, block_date := as.Date(as.POSIXct(block_timestamp, origin = "1970-01-01"))]
 
-coinbase.ring.members.date[, block_timestamp_ring.date.isoweek :=
-    paste(lubridate::isoyear(block_timestamp_ring.date),
-      formatC(lubridate::isoweek(block_timestamp_ring.date), width = 2, flag = "0"), sep = "-")]
-
-coinbase.ring.members <- merge(coinbase.ring.members, coinbase.ring.members.date)
+output.index <- merge(output.index, output.index.date)
 # speed improvement by splitting and then merging
-
-coinbase.ring.members.stats <- coinbase.ring.members[, .(
-  effective.ring.size.mean = as.numeric(mean(effective.ring.size)),
-  effective.ring.size.median = as.numeric(median(effective.ring.size)),
-  effective.ring.size.percentile.05 = as.numeric(quantile(effective.ring.size, probs = 0.05))
-  # as.numeric() to make sure results of each "by" subset are all floats
-  ), by = "block_timestamp_ring.date.isoweek"]
-
-
 
 
 
