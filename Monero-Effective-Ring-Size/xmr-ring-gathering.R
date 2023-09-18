@@ -174,6 +174,13 @@ system.time({
         # With "&&", evaluates each expression sequentially until it is false (if ever). Then stops.
         # If all are TRUE, then returns true.
         
+        is.mordinal.transfer <-
+          height >= 2838965 &&
+          length(tx.json$vout) == 2 &&
+          i > 1 && # not the first tx, which is the coinbase tx
+          length(tx.json$extra) > 44 &&
+          tx.json$extra[45] == 17
+        
         output.index.collected[[i]] <- data.table(
           block_height = height,
           block_timestamp = block.data$block_header$timestamp,
@@ -184,11 +191,14 @@ system.time({
           tx_version = tx.json$version,
           tx_fee = tx_fee,
           tx_size_bytes = tx_size_bytes,
+          number_of_inputs = length(tx.json$vin), 
+          number_of_outputs = length(tx.json$vout),
           output_num = seq_along(rcp.ret$txs[[i]]$output_indices),
           output_index = rcp.ret$txs[[i]]$output_indices,
           output_amount = output.amounts,
           output_unlock_time = tx.json$unlock_time,
-          is_mordinal = is.mordinal)
+          is_mordinal = is.mordinal,
+          is_mordinal_transfer = is.mordinal.transfer)
         
         
         if (i == 1L) { next }
@@ -254,10 +264,10 @@ setorder(rings, tx_hash, input_num, key_offset_num)
 
 rings[, output_index := cumsum(key_offsets), by = c("tx_hash", "input_num")]
 
-rings <- merge(rings, unique(output.index[, .(tx_hash, block_height, block_timestamp)]), by = "tx_hash")
+rings <- merge(rings, unique(output.index[, .(tx_hash, block_height, block_timestamp, tx_fee, tx_size_bytes)]), by = "tx_hash")
 
-setnames(rings, c("block_height", "block_timestamp"),
-  c("block_height_ring", "block_timestamp_ring"))
+setnames(rings, c("block_height", "block_timestamp", "tx_fee", "tx_size_bytes"),
+  c("block_height_ring", "block_timestamp_ring", "tx_fee_ring", "tx_size_bytes_ring"))
 
 output.index[, output_amount_for_index := ifelse(tx_num == 1, 0, output_amount)]
 
@@ -268,7 +278,8 @@ output.index <- output.index[ !(tx_num == 1 & tx_version == 1), ]
 
 
 xmr.rings <- merge(rings, output.index[, .(block_height, block_timestamp, tx_num, output_num,
-  output_index, output_amount, output_amount_for_index, output_unlock_time, is_mordinal)],
+  output_index, output_amount, output_amount_for_index, output_unlock_time, number_of_inputs,
+  number_of_outputs, is_mordinal, is_mordinal_transfer, tx_fee, tx_size_bytes)],
   # only dont need tx_hash column from output.index
   by.x = c("input_amount", "output_index"),
   by.y = c("output_amount_for_index", "output_index")) #, all = TRUE)
