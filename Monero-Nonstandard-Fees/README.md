@@ -6,7 +6,7 @@ The data in this directory can help identify which wallet implementations may be
 
 ## Identification of nonstandard fees in Monero
 
-The tabulation of nonstandard fees will use "nanonero" as the basic unit. A [nanonero](https://web.getmonero.org/resources/moneropedia/denominations.html) is 0.000000001 XMR. In other words, it is 1/1000th of the smallest Monero unit, the piconero. In the tables in the  `data ` directory, fee per byte is rounded down to the nearest integer nanonero. The complete operation is `floor( (tx_fee/tx_size_bytes)/1000 )`.
+The tabulation of nonstandard fees will use "nanonero" as the basic unit. A [nanonero](https://web.getmonero.org/resources/moneropedia/denominations.html) is 0.000000001 XMR. In other words, it is 1/1000th of the smallest Monero unit, the piconero. In the tables in the  `data` directory, fee per byte is rounded down to the nearest integer nanonero. The complete operation is `floor( (tx_fee/tx_size_bytes)/1000 )`.
 
 Except when the dynamic block/fee algorithm is raising block size and fees, a `get_fee_estimate` RPC call to `monerod` will return these four values for nanoneros per byte: 20, 80, 320, 4000. These four levels are supposed to give transactions different priorities: "slow, normal, fast, fastest". However, since Monero blocks are usually not full, paying a higher fee usually does not mean that a transaction will be confirmed in a block any faster than a lower fee unless mining pool operators update their block templates more frequently when they receive transactions with higher fees. Any fees outside of these four values are considered nonstandard.
 
@@ -31,7 +31,7 @@ According to my research, at least eight wallets did not upgrade in time for the
 
 Wallets accessible to ordinary users are not the only wallet implementations creating transactions on the Monero blockchain. Services like centralized exchanges also create transactions. Downtime/uptime of withdrawal capability of these services can provide clues about which set of transactions with nonstandard fees they may be creating. moneroj.net has a record of Binance withdrawal suspensions: https://moneroj.net/withdrawals/
 
-A researcher could create transactions with nonstandard wallets to provide evidence that a specific wallet is responsible for certain types of nonstandard fees. The fees of any transaction can be viewed by inputting its transaction ID into a block explorer like https://xmrchain.net/ . Note that` xmrchain.net`'s definition of kB is 1024 bytes, not 1000 bytes.
+A researcher could create transactions with nonstandard wallets to provide evidence that a specific wallet is responsible for certain types of nonstandard fees. The fees of any transaction can be viewed by inputting its transaction ID into a block explorer like https://xmrchain.net/ . Note that `xmrchain.net`'s definition of kB is 1024 bytes, not 1000 bytes.
 
 ## Tabulated data
 
