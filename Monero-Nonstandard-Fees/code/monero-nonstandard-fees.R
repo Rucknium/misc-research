@@ -138,7 +138,6 @@ raw.fee.sort.prevalence.day <- fees[block_height >= v16.fork.height & n.outputs 
 names(raw.fee.sort.prevalence.day)[-(1:2)] <- paste0(names(fee.freq), "_per_byte")
 
 
-
 write.csv(fee.clusters.week, file = "fee-clusters-by-week.csv", row.names = FALSE)
 write.csv(fee.clusters.day, file = "fee-clusters-by-day.csv", row.names = FALSE)
 
