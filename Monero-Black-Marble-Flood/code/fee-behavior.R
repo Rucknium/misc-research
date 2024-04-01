@@ -28,6 +28,7 @@ ggplot(all.tx.volume.fees, aes(x = block_date,
   colour = factor(fee_per_byte_nanoneros.cut))) +
   geom_line(linewidth = 1.5) +
   geom_vline(xintercept = start.spam.date, linetype = 2) +
+  geom_vline(xintercept = end.spam.date, linetype = 2) +
   scale_y_continuous( limits = c(0, 1), expand = c(0, 0), labels = scales::label_percent()) +
   scale_x_date(breaks = "3 day", expand = c(0, 0), guide = guide_axis(angle = 90)) +
   ggtitle("Share of transactions by fee tier (all transactions)") +
@@ -71,6 +72,7 @@ ggplot(non.spam.fingerprint.tx.fees, aes(x = block_date,
   colour = factor(fee_per_byte_nanoneros.cut))) +
   geom_line(linewidth = 1.5)  +
   geom_vline(xintercept = start.spam.date, linetype = 2) +
+  geom_vline(xintercept = end.spam.date, linetype = 2) +
   scale_y_continuous( limits = c(0, 1), expand = c(0, 0), labels = scales::label_percent()) +
   scale_x_date(breaks = "3 day", expand = c(0, 0), guide = guide_axis(angle = 90)) +
   ggtitle("Share of transactions by fee tier (suspected spam removed)") +

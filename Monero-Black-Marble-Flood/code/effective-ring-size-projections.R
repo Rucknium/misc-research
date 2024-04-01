@@ -2,7 +2,7 @@
 
 mean.coinbase.tx.size <- output.index[!duplicated(tx_hash) & tx_num == 1, mean(tx_size_bytes)]
 
-num.blocks.since.spam <- output.index[block_height >= start.spam.height, uniqueN(block_height)]
+num.blocks.during.spam <- output.index[block_height %between% c(start.spam.height, end.spam.height), uniqueN(block_height)]
 
 mean.size.1in.2out <- spam.results[[1]]$non.spam.fingerprint.tx[number_of_inputs == 1 & number_of_outputs == 2, mean(tx_size_bytes)]
 mean.size.2in.2out <- spam.results[[1]]$non.spam.fingerprint.tx[number_of_inputs == 2 & number_of_outputs == 2, mean(tx_size_bytes)]
@@ -26,10 +26,17 @@ sim.spam <- lapply(c(11, 16, 25, 40, 60), FUN = function(ring.size.sim) {
       tx_weight_bytes - mean.size.16.ring.input * number_of_inputs + number_of_inputs * mean.size.one.ring.member * ring.size.sim]
   
   mean.non.spam.kb.per.block <- mean.coinbase.tx.size/1000 +
-    (sum(non.spam.fingerprint.tx.sim[block_height >= start.spam.height, tx_weight_bytes.sim])/num.blocks.since.spam)/1000
+    (sum(non.spam.fingerprint.tx.sim[block_height %between%
+        c(start.spam.height, end.spam.height), tx_weight_bytes.sim])/num.blocks.since.spam)/1000
   
+  mean.non.spam.output.per.block <- nrow(non.spam.fingerprint[block_height %between%
+      c(start.spam.height, end.spam.height), ])/num.blocks.since.spam
   
-  mean.non.spam.output.per.block <- nrow(non.spam.fingerprint[block_height >= start.spam.height, ])/num.blocks.since.spam
+  # Don't do this because the number of blocks after start.spam.height in
+  # non.spam.fingerprint.tx.sim is a little smaller than output.index:
+  # mean.non.spam.kb.per.block <- mean.coinbase.tx.size/1000 +
+  #   (sum(non.spam.fingerprint.tx.sim[block_height >= start.spam.height, tx_weight_bytes.sim/uniqueN(block_height)]))/1000
+  # mean.non.spam.output.per.block <- non.spam.fingerprint[block_height >= start.spam.height, .N/uniqueN(block_height)]
   
   mean.effective.ring.size <- ring.size.sim
   simulated.adversary.owned.outputs <- 0

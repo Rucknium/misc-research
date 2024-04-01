@@ -3,6 +3,12 @@
 start.spam.height <- 3097764 # 2024-03-04 15:21:24
 start.spam.date <- as.Date("2024-03-04")
 
+
+end.spam.height <- 3114046 # 2024-03-27 06:30:37 UTC
+end.spam.date <- as.Date("2024-03-27")
+
+
+
 library(ggplot2)
 
 output.index[, block_date.week.day := weekdays(block_date)]
@@ -41,7 +47,7 @@ for (spam.type in seq_along(spam.types)) {
       by = "block_date.week.day"]
     
     spam.fingerprint <- output.index[
-      block_height >= start.spam.height &
+      block_height %between% c(start.spam.height, end.spam.height) &
         tx_num != 1 &
         eval(spam.types[[spam.type.sub]]$fingerprint.crieria),  ]
     
@@ -70,8 +76,8 @@ for (spam.type in seq_along(spam.types)) {
   
   non.spam.fingerprint <- output.index[ tx_num != 1 &
       (
-        block_height < start.spam.height |
-          (block_height >= start.spam.height  &
+        (! block_height %between% c(start.spam.height, end.spam.height)) |
+          (block_height %between% c(start.spam.height, end.spam.height)  &
               ! (tx_hash %chin% spam.fingerprint.tx$tx_hash))
       ), ]
   
@@ -182,7 +188,7 @@ all.output.volume.by.day <- all.output.volume.by.day[-.N, ]
 
 png("spam-share-outputs.png", width = 600, height = 600)
 
-ggplot(all.output.volume.by.day[block_date >= start.spam.date, ], aes(x = as.POSIXct(block_date), y = spam.share.outputs)) +
+ggplot(all.output.volume.by.day[block_date %between% c(start.spam.date, end.spam.date), ], aes(x = as.POSIXct(block_date), y = spam.share.outputs)) +
   geom_line() +
   scale_y_continuous(limit = c(0, 1), expand = c(0, 0), labels = scales::label_percent()) +
   scale_x_datetime(date_breaks = "day", guide = guide_axis(angle = 90)) +
@@ -200,8 +206,9 @@ dev.off()
 
 
 
-mean.spam.share.outputs <- all.output.volume.by.day[block_date >= (start.spam.date + 1), mean(spam.share.outputs)]
-# Skip the first day because suspected spam started in the middle of the day
+mean.spam.share.outputs <- all.output.volume.by.day[block_date %between%
+    c(start.spam.date + 1, end.spam.date - 1), mean(spam.share.outputs)]
+# Skip the first and last days because suspected spam started in the middle of the days
 
 binom.ring.size <- rbind(
   data.table(x = 1:16, y = dbinom(0:15, size = 11, prob = 1 - 192/233),

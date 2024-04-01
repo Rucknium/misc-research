@@ -15,6 +15,7 @@ png("mean-delay-first-confirmation.png", width = 500, height = 600)
 ggplot(mempool.hourly[block_receive_time.hour >= as.POSIXct(start.spam.date - 3),], aes(x = block_receive_time.hour, y = confirmation.latency/60)) +
   geom_line() +
   geom_vline(xintercept = mempool[block_height == start.spam.height, block_receive_time_UTC[1]], linetype = 2) +
+  geom_vline(xintercept = mempool[block_height == end.spam.height, block_receive_time_UTC[1]], linetype = 2) +
   scale_y_continuous(breaks = seq(0, 600, by = 30), limits = c(0, NA), expand = c(0, 0)) +
   scale_x_datetime(breaks = "day", expand = c(0, 0), guide = guide_axis(angle = 90)) +
   ggtitle("Mean delay to first transaction confirmation") +
@@ -57,6 +58,7 @@ png("max-delay-first-confirmation.png", width = 500, height = 600)
 ggplot(hourly.max.confirmation.latency[hour.bin >= as.POSIXct(start.spam.date - 3),], aes(x = hour.bin, y = confirmation.latency/60^2)) +
   geom_line() +
   geom_vline(xintercept = mempool[block_height == start.spam.height, block_receive_time_UTC[1]], linetype = 2) +
+  geom_vline(xintercept = mempool[block_height == end.spam.height, block_receive_time_UTC[1]], linetype = 2) +
   scale_y_continuous(breaks = seq(0, 24*5, by = 3),limits = c(0, NA), expand = c(0, 0)) +
   scale_x_datetime(breaks = "day", expand = c(0, 0), guide = guide_axis(angle = 90)) +
   ggtitle("Maximum delay to first transaction confirmation") +
