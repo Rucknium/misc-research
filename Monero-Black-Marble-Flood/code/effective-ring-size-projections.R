@@ -11,8 +11,20 @@ mean.size.16.ring.input <- mean.size.2in.2out - mean.size.1in.2out
 mean.size.zero.ring.tx.size <- mean.size.1in.2out - mean.size.16.ring.input
 # This "size zero ring" is so that the variable ring size can be added later
 
-mean.size.16.ring.input <- mean.size.16.ring.input - 32
-# Subtract key image bytes since there is just one key image per ring
+mean.size.16.ring.input <- mean.size.16.ring.input - 32 * 4
+# We subtract 32 bytes times 4 because
+# 1) The key image in the vin[[1]]$key$k_image JSON object is 32 bytes (64 characters
+# of hexcode, divided by two). There is one key image per ring.
+# 2-4) There are 3 other 32 byte strings in
+# rctsig_prunable$CLSAGs[[1]]$c1
+# rctsig_prunable$CLSAGs[[1]]$D
+# rctsig_prunable$pseudoOuts
+# That appear once per ring and do not seem to scale up with ring size.
+# The "mean.size.16.ring.input" will be one 32 byte string for the ring signature
+# string per each ring member, plus some amount (about 3) bytes for
+# the average storage space per integer output index in vin[[1]]$key$key_offsets
+# I think the integer output indices are store as variable-length (in bytes)
+# data objects.
 mean.size.one.ring.member <- mean.size.16.ring.input / 16
 
 
