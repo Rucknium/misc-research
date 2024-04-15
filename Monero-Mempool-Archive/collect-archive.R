@@ -71,7 +71,7 @@ tx.pool <- c()
 
 # Check that node is responding
 while(length(tx.pool) == 0) {
-  tx.pool <- xmr.rpc(paste0(url.rpc, "/get_transaction_pool"))$transactions
+  tx.pool <- xmr.rpc(paste0(url.rpc, "/get_transaction_pool"), num.as.string = FALSE)$transactions
   
   if (length(tx.pool) > 0 && tx.pool[[1]]$receive_time == 0) {
     stop("Transaction receive_time is missing. Possible solution: remove '--restricted-rpc' monerod flag.")
@@ -88,9 +88,9 @@ while (TRUE) {
   
   compute.time <- system.time({
     
-    tx.pool <- xmr.rpc(paste0(url.rpc, "/get_transaction_pool"), keep.trying.rpc = TRUE)$transactions
+    tx.pool <- xmr.rpc(paste0(url.rpc, "/get_transaction_pool"), num.as.string = FALSE, keep.trying.rpc = TRUE)$transactions
     
-    block.header <- xmr.rpc(paste0(url.rpc, "/json_rpc"), method = "get_last_block_header")$result$block_header
+    block.header <- xmr.rpc(paste0(url.rpc, "/json_rpc"), method = "get_last_block_header", num.as.string = FALSE)$result$block_header
     
     block_receive_time <- round(Sys.time())
     # One second time resolution
