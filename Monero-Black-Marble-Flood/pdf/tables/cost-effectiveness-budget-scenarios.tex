@@ -1,0 +1,30 @@
+\setlength{\LTpost}{0mm}
+\begin{longtable}{Rp{1.75cm}Rp{1cm}Rp{1.5cm}Rp{0.75cm}Rp{1cm}Rp{2cm}Rp{1.5cm}Rp{0.75cm}Rp{1.4cm}Rp{1cm}Rp{1cm}Rp{1cm}Rp{1cm}Rp{1cm}Rp{0.75cm}Rp{1.4cm}}
+\caption{
+{\large Minimum fee and ring size at optimal cost effectiveness, adversary budget scenarios}
+} \\ 
+\toprule
+ &  &  &  &  &  &  & \multicolumn{4}{c}{Normal tx volume} & \multicolumn{5}{c}{Normal tx volume + black marble flooding} \\ 
+\cmidrule(lr){8-11} \cmidrule(lr){12-16}
+ &  &  &  &  &  &  &  &  & \multicolumn{4}{c}{One year blockchain growth (GB)} &  &  &  \\ 
+\cmidrule(lr){10-13}
+Adversary XMR budget per day & Nominal ring size & Min fee (nanoneros per byte) & CE & Size of 2in/2out (bytes) & User's cost to send 2in/2out (USD cents) & Seconds to verify 2in/2out & Block size (KB) & Seconds to verify txs in block & Unpruned & Pruned & Unpruned & Pruned & Effective ring size & Block size (KB) & Seconds to verify txs in block \\ 
+\midrule\addlinespace[2.5pt]
+\cellcolor[HTML]{00FF00}{\textcolor[HTML]{000000}{$2.50$}} & \cellcolor[HTML]{00FF00}{\textcolor[HTML]{000000}{16}} & \cellcolor[HTML]{00FF00}{\textcolor[HTML]{000000}{$20$}} & \cellcolor[HTML]{00FF00}{\textcolor[HTML]{000000}{$1.08$}} & \cellcolor[HTML]{00FF00}{\textcolor[HTML]{000000}{$2,219$}} & \cellcolor[HTML]{00FF00}{\textcolor[HTML]{000000}{$0.53$}} & \cellcolor[HTML]{00FF00}{\textcolor[HTML]{000000}{$0.012$}} & \cellcolor[HTML]{00FF00}{\textcolor[HTML]{000000}{$95$}} & \cellcolor[HTML]{00FF00}{\textcolor[HTML]{000000}{$0.54$}} & \cellcolor[HTML]{00FF00}{\textcolor[HTML]{000000}{$25$}} & \cellcolor[HTML]{00FF00}{\textcolor[HTML]{000000}{$8$}} & \cellcolor[HTML]{00FF00}{\textcolor[HTML]{000000}{$71$}} & \cellcolor[HTML]{00FF00}{\textcolor[HTML]{000000}{$21$}} & \cellcolor[HTML]{00FF00}{\textcolor[HTML]{000000}{$5.41$}} & \cellcolor[HTML]{00FF00}{\textcolor[HTML]{000000}{$269$}} & \cellcolor[HTML]{00FF00}{\textcolor[HTML]{000000}{$1.62$}} \\ 
+$0.25$ & 60 & $10$ & $0.24$ & $5,289$ & $0.63$ & $0.043$ & $223$ & $1.82$ & $59$ & $14$ & $68$ & $17$ & $48.60$ & $258$ & $2.18$ \\ 
+$0.50$ & 60 & $10$ & $0.29$ & $5,289$ & $0.63$ & $0.043$ & $223$ & $1.82$ & $59$ & $14$ & $77$ & $19$ & $40.89$ & $293$ & $2.53$ \\ 
+$1.25$ & 60 & $20$ & $0.37$ & $5,289$ & $1.27$ & $0.043$ & $223$ & $1.82$ & $59$ & $14$ & $82$ & $20$ & $37.90$ & $310$ & $2.71$ \\ 
+$2.50$ & 60 & $30$ & $0.48$ & $5,289$ & $1.90$ & $0.043$ & $223$ & $1.82$ & $59$ & $14$ & $89$ & $22$ & $33.80$ & $339$ & $3.01$ \\ 
+$5.00$ & 60 & $40$ & $0.66$ & $5,289$ & $2.54$ & $0.043$ & $223$ & $1.82$ & $59$ & $14$ & $104$ & $26$ & $27.84$ & $397$ & $3.60$ \\ 
+$12.50$ & 60 & $70$ & $1.10$ & $5,289$ & $4.44$ & $0.043$ & $223$ & $1.82$ & $59$ & $14$ & $124$ & $30$ & $22.76$ & $471$ & $4.37$ \\ 
+$25.00$ & 60 & $90$ & $1.73$ & $5,289$ & $5.71$ & $0.043$ & $223$ & $1.82$ & $59$ & $14$ & $160$ & $39$ & $17.11$ & $609$ & $5.78$ \\ 
+$50.00$ & 60 & $120$ & $2.83$ & $5,289$ & $7.62$ & $0.043$ & $223$ & $1.82$ & $59$ & $14$ & $211$ & $52$ & $12.82$ & $802$ & $7.77$ \\ 
+$125.00$ & 60 & $140$ & $5.68$ & $5,289$ & $8.89$ & $0.043$ & $223$ & $1.82$ & $59$ & $14$ & $385$ & $94$ & $7.17$ & $1,464$ & $14.56$ \\ 
+$250.00$ & 60 & $180$ & $9.69$ & $5,289$ & $11.42$ & $0.043$ & $223$ & $1.82$ & $59$ & $14$ & $566$ & $138$ & $5.12$ & $2,152$ & $21.64$ \\ 
+$500.00$ & 60 & $350$ & $17.47$ & $5,289$ & $22.21$ & $0.043$ & $223$ & $1.82$ & $59$ & $14$ & $580$ & $142$ & $5.02$ & $2,208$ & $22.20$ \\ 
+\bottomrule
+\label{table-scenarios-budget}
+\end{longtable}
+\begin{minipage}{\linewidth}
+Row in green is the status quo\\
+\end{minipage}
