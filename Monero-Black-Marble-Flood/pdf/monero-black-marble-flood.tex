@@ -5,6 +5,7 @@
 
 
 \usepackage{float}
+\usepackage{wrapfig}
 
 %Primary packages
 \usepackage{fancyvrb}
@@ -58,6 +59,14 @@
 \usepackage{multirow}
 \usepackage{stackrel}
 \usepackage{rotating}
+\usepackage{longtable}
+\usepackage{booktabs}
+
+
+
+\newcolumntype{L}{>{\raggedright\arraybackslash}}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}}
+\newcolumntype{C}{>{\centering\arraybackslash}}
 
 
 % https://tex.stackexchange.com/questions/151241/remove-metadata-of-pdf-generated-by-latex
@@ -87,9 +96,9 @@
 \begin{document}
 \title{March 2024 Suspected Black Marble Flooding Against Monero:
 Privacy, User Experience, and Countermeasures\\\vspace{.3cm}
-\large Draft v0.2\vspace{-.715cm}}
-\author{Rucknium\orcidlink{https://orcid.org/0000-0001-5999-8950} }
-\date{March 27, 2024}
+\large Draft v0.3\vspace{-.715cm}}
+\author{Rucknium\orcidlink{0000-0001-5999-8950} }
+\date{October 9, 2024}
 \maketitle
 \begin{abstract}
 On March 4, 2024, aggregate Monero transaction volume suddenly almost
@@ -471,12 +480,40 @@ This is a modest gain of attack effectiveness, but \cite{Chervinski2021}
 appears to be using a suboptimal chain reaction algorithm instead
 of the closed set attack.
 
-The actual risk from chain reaction analysis in the suspected March
-2024 flooding is a gap in our knowledge. \cite{Vijayakumaran2023}
-provides an open source implementation of the DM decomposition in
-Rust and excellent documentation.\footnote{\url{https://github.com/avras/cryptonote-analysis}\\
-\url{https://www.respectedsir.com/cna}} A Monte Carlo simulation applying the DM decomposition to the March
-2024 black marble estimates should be written.
+I implemented a DM decomposition simulation, using the real data from
+the black marble era of transactions as the starting point. The set
+of transactions produced by the adversary is known only to the adversary,
+so a reasonable guess was required. First, transactions that fit the
+spamming criteria were randomly assigned to black marble status in
+a proportion equal to the spam volume. Second, each ring was randomly
+assigned a real spend so that rings in non-black marble transactions
+would not entirely disappear in the next step. Third, outputs in black
+marble transactions were removed from the rings of non-black-marble
+transactions, except when the ``real spend'' assigned in the previous
+step would be removed. Fourth, all black marble transactions were
+removed from the dataset. The transaction graph left after these deletions
+is not necessarily internally consistent (i.e. funds might not actually
+be able to flow between transactions), but the objective is to approximate
+a chain reaction attack. Fifth, I used a modified version of the DM
+decomposition developed by \cite{Vijayakumaran2023} to simulate a
+chain reaction attack.\footnote{\url{https://github.com/avras/cryptonote-analysis}\\
+\url{https://www.respectedsir.com/cna}}
+
+After the black marble outputs were removed but before the DM decomposition
+was applied, 0.57 percent of rings in the simulated dataset had a
+single ring member left. The real spend could be deduced in these
+0.57 percent of rings. This simulated estimate is consistent with
+the results in Figure \ref{fig-share-ring-size-one} that uses the
+$f\left(0,n-1,\frac{\mathrm{E}\left[n_{e}\right]-1}{n-1}\right)$
+formula instead of a simulation. After the DM decomposition was applied
+to the simulated dataset, the share of rings whose real spend could
+be deterministically deduced increased to 0.82 percent. Therefore,
+the DM decomposition would increase the black-marble adversary's ability
+to deterministically deduce the real spend by 44 percent. My simulation
+results can be compared to the results of \cite{Chervinski2021} in
+a different parameter environment, which found a 22 percent increase
+from a chain reaction attack (the share of rings with effective ring
+size one increased from 11.9 to 14.5 percent).
 
 \section{Countermeasures}
 
@@ -635,7 +672,7 @@ to the network, transactions did not drop out of the mempool. They
 just took longer to confirm. There were only two transaction IDs in
 the mempool of one of the mempool archive nodes that did not confirm
 during the spam period. Both occurred on March 8 when the mempool
-was very congested. The the two ``disappearing transactions'' could
+was very congested. The two ``disappearing transactions'' could
 happen if someone submits a transactions to an overloaded public RPC
 node, the transactions does not propagate well, and then the user
 reconstructs the transactions with another node. The first transaction
@@ -672,18 +709,211 @@ the spam hypothesis.
 More can be done to generate evidence for or against the spam hypothesis.
 \cite{Krawiec-Thayer2021} analyzed the age of all ring members. Using
 the OSPEAD techniques, the distribution of the age of the real spends
-can be estimated.\footnote{\url{https://github.com/Rucknium/OSPEAD}}
-The Monero node network can be actively crawled to see if the spam
-transactions originate from one node. Dandelion++ can defeat attempts
-to discover the origin of most transaction because the signal of the
-real transaction is covered by the Dandelion++ noise. When the signal
-is huge like the spam, some statistical analysis could overcome the
-Dandelion++ protection. Investigatory nodes could use \texttt{set\_log
-net.p2p.msg:INFO} to view which neighboring nodes the suspected spam
-is coming from. Then the investigatory node could crawl the network
-in the direction of the highest incoming volume. The techniques of
-\cite{Sharma2022} are useful at extremely high transaction volumes,
-like in the spam case, and could be used.
+can be estimated.\footnote{\url{https://github.com/Rucknium/OSPEAD}} 
+
+Dandelion++ can defeat attempts to discover the origin of most transactions
+because the signal of the real transaction is covered by the Dandelion++
+noise. When the signal is huge like the spam, some statistical analysis
+could overcome the Dandelion++ protection. Node can use the \texttt{net.p2p.msg:INFO}
+log setting to record incoming fluff-phase transactions. From April
+14, 2024 to May 23, 2024, peer-to-peer log data was collected from
+about ten Monero nodes to try to establish evidence that the suspected
+black marble transactions originated from a single node.\footnote{Thanks to cyrix126, Nep Nep, and anonymous node operators for contributing
+log data.} Two factors have made this difficult. First, network topology information,
+i.e. which nodes are connected to each other, is not easily obtained.
+\cite{Cao2020} used the last\_seen timestamp in peer-to-peer communications
+to estimate the node topology, but the timestamp has been removed
+from Monero's node code.\footnote{\url{https://github.com/monero-project/monero/pull/5681} and \url{https://github.com/monero-project/monero/pull/5682}}
+Topology information would have allowed a ``node crawler'' to move
+through the network toward the likely source of the transaction spam.
+Second, log data collection started after the spam wave ended, and
+no new spam waves appeared. Therefore, the aim of the data analysis
+had to change. The following analysis uncovers facts about Monero's
+network and transaction propagation during normal operation that could
+provide a foundation for future research on the network's privacy
+and transaction propagation properties.
+
+The number of unique IP addresses of peer nodes in the dataset is
+about 13,600. This may be a rough estimate of the total number of
+nodes on the network. Counting nodes this way can create both under-counts
+and over-counts because of nodes entering and leaving the network,
+nodes changing IP addresses, and multiple nodes behind the same IP
+address. In any case, the 13,600 figure is similar to a May 29, 2024
+count by \texttt{monero.fail} of about 12,000 nodes on the network.\footnote{https://web.archive.org/web/20240529014020/https://monero.fail/map}
+
+The stability of the network topology is one of the factors that influences
+the effectiveness of Monero's Dandelion++ network privacy protocol.
+When nodes are connected to each other for a long time, it is easier
+for an adversary to get information about network topology and use
+it to try to discover the true node origin of a transaction (\cite{Sharma2022}).
+The rate of connection creation and destruction could also affect
+the vulnerability of the network to partitioning and eclipse attacks
+(\cite{Franzoni2022b}).
+
+A node can have two basic type of connections: incoming and outgoing.
+A node's ``incoming'' connections are connections that the node's
+peer initiated. A node's ``outgoing'' connections are connections
+that the node initiated. By default, nodes that are behind a firewall
+or residential router usually do not accept incoming connections.
+The default maximum number of outgoing connections is 12. There is
+no limit on incoming connections by default, but usually nodes accepting
+incoming connections have between 50 and 100 incoming connections. 
+
+\begin{wrapfigure}{I}{0.45\columnwidth}%
+
+\caption{Peer connection duration}
+
+\label{fig-p2p-connection-duration}
+\begin{centering}
+\includegraphics[scale=0.5]{images/p2p-connection-duration}
+\par\end{centering}
+\end{wrapfigure}%
+ \begin{wraptable}{O}{0.45\columnwidth}%
+\input{tables/multiple-send-p2p.tex}\end{wraptable}%
+
+Based on the timestamps of transaction gossip messages from nodes
+that accept incoming connections, the median duration of incoming
+connections was 23 minutes. For outgoing connections, the median duration
+was 23.5 minutes. A small number of connections last for much longer.
+About 1.5 percent of incoming connections lasted longer than 6 hours.
+About 0.2 percent of incoming connections lasted longer than 24 hours.
+No outgoing connections lasted longer than six hours. This means that
+some peer nodes chose to keep connections alive for a long period
+of time. Node operators can manually set the \texttt{-{}-add-priority-node}
+or \texttt{-{}-add-exclusive-node} node startup option to maintain
+longer connections. Figure \ref{fig-p2p-connection-duration} is a
+kernel density estimate of the duration of incoming and outgoing connections.
+A small number of connections last for only a few minutes. A large
+number of connections end at about 25 minutes.
+
+Monero's fluff-phase transaction propagation is a type of gossip protocol.
+In most gossip protocols, nodes send each unique message to each peer
+one time at most. Monero nodes will sent a transaction to the same
+peer multiple times if the transaction has not been confirmed by miners
+after a period of time. Arguably, this behavior makes transaction
+propagation more reliable, at the cost of higher bandwidth usage.
+Usually, transactions are confirmed immediately when the next block
+is mined, so transactions are not sent more than once. If the transaction
+pool is congested or if there is an unusually long delay until the
+next block is mined, transactions may be sent more than once. In the
+dataset, about 93 percent of transactions were received from the same
+peer only once. About 6 percent were received from the same peer twice.
+About 1 percent of transactions were received from the same peer more
+than twice.
+
+Table \ref{table-multiple-send-p2p} shows the median time interval
+between receiving duplicate transaction from the same peer. Up to
+the seventh relay, the $i$th relay has a delay of $f(i)=5\cdot2^{i-2}$.
+After the seventh relay, the data suggests that some peers get stuck
+broadcasting transactions every two to four minutes.\footnote{boog900 stated that ``re-broadcasts happen after 5 mins then 10,
+then 15 increasing the wait by 5 mins each time upto {[}sic{]} 4 hours
+where it is capped''. The form of this additive delay is similar
+to the exponential delay that the empirical data suggests. https://libera.monerologs.net/monero-research-lab/20240828\#c418612} 
+
+A Monero node's fluff-phase gossip message can contain more than one
+transaction. Usually, when a stem-phase transaction converts into
+a fluff-phase transaction, it will be the only transaction in its
+gossip message. As transactions propagates through the network, they
+will tend to clump together into gossip messages with other transactions.
+The clumping occurs because nodes maintain a single fluff-phase delay
+timer for each connection. As soon as the ``first'' transaction
+is received from a peer, a Poisson-distributed random timer is set
+for each connection to a peer. If a node receives a ``second'',
+``third'', etc. transaction before a connection's timer expires,
+then those transaction are grouped with the first one in a single
+message that eventually is sent to the peer when the timer expires.
+Table \ref{table-tx-clumping-p2p} is shows the distribution of clumping.
+About 25 percent of gossip messages contained just one transaction.
+Another 25 percent contained two transactions. The remaining messages
+contained three or more transactions.
+
+\begin{wraptable}{O}{0.35\columnwidth}%
+\input{tables/tx-clumping-p2p.tex}\end{wraptable}%
+
+A subset of the nodes that collected the peer-to-peer log data also
+collected network latency data through ping requests to peer nodes.
+The data can be used to analyze how network latency affects transaction
+propagation. When it takes longer for a peer node to send a message
+to the data logging node, we expect that data logging node will receive
+transactions from high-latency nodes later, on average, than from
+low-latency nodes. I estimated an Ordinary Least Squares (OLS) regression
+model to evaluate this hypothesis. First, I computed the time interval
+between the first receipt of a transaction from any node and the time
+that each node sent the transaction: \texttt{time\_since\_first\_receipt}.
+Then, the round-trip ping time was divide by two to get the one-way
+network latency: \texttt{one\_way\_ping}. The regression equation
+was \texttt{time\_since\_first\_receipt = one\_way\_ping + error\_term}
+
+The estimated coefficient on \texttt{one\_way\_ping} was 7.5 (standard
+error: 0.02). This is the expected direction of the association, but
+the magnitude seems high. The coefficient means that a one millisecond
+increase in ping time was associated with a 7.5 millisecond increase
+in the time to receive the transaction from the peer. If the effect
+of ping on transaction receipt delay only operated through the connection
+between the peer node and the logging node, we may expect an estimated
+coefficient value of one. There are at least two possible explanations
+for the high estimated coefficient. First, assume that the logging
+nodes were located in a geographic area with low average ping to peers.
+And assume that the high-ping peers were located in an area with high
+average ping to peers. Then, the high-ping nodes would have high delay
+in sending \textit{and} receiving transactions from the ``low-ping''
+cluster of nodes. That effect could at least double the latency, but
+the effect could be even higher because of complex network interactions.
+Second, only about two-thirds of peer nodes responded to ping requests.
+The incomplete response rate could cause sample selection bias issues.
+
+Occasionally, two of the logging nodes were connected to the same
+peer node at the same time. Data from these simultaneous connections
+can be analyzed to reveal the transaction broadcast delay patterns.
+The logging nodes did not try to synchronize their system clocks.
+The following analysis used the pair of logging nodes whose system
+clocks seemed to be in sync.
+
+\begin{figure}[H]
+\caption{Time difference between tx receipt, one-second cycle}
+\label{fig-one-second-period-tx-p2p-msg}
+\centering{}\includegraphics[scale=0.5]{images/one-second-period-tx-p2p-msg}
+\end{figure}
+
+During the data logging period, Monero nodes drew a random variable
+from a Poisson distribution to create transaction broadcast timers
+for each of its connections. The distribution may change to exponential
+in the future.\footnote{\url{https://github.com/monero-project/monero/pull/9295}}
+The raw draw from the Poisson distribution set the rate parameter
+$\lambda$ to 20 seconds. Then, the draw is divided by 4. The final
+distribution has a mean of 5 seconds, with possible values at each
+quarter second. If a node is following the protocol, we should observe
+two data patterns when we compute the difference between the arrival
+times of a transaction between two logging nodes. First, the differences
+should usually be in quarter second intervals. Second, the difference
+should follow a Skellam distribution, which is the distribution that
+describes the difference between two Poisson-distributed independent
+random variables. These patterns will not be exact because of difference
+in network latencies.
+
+Figure \ref{fig-one-second-period-tx-p2p-msg} shows a circular kernel
+density plot of the time difference between two nodes receiving the
+same transaction from the same peer node. The data in the plot was
+created by taking the remainder (modulo) of these time differences
+when divided by one second. The results are consistent with expectations.
+The vast majority of time differences are at the 0, 1/4, 1/2, and
+3/4 second mark.
+
+Figure \ref{fig-skellam-histogram-tx-p2p-msg} shows a histogram of
+the empirical distribution of time differences and a theoretical Skellam
+distribution.\footnote{The Skellam distribution probability mass function has been re-scaled
+upward by a factor of 8 to align with the histogram. Each second contains
+8 histogram bins. } The histogram of the real data and the theoretical distribution are
+roughly similar except that the number of empirical observation at
+zero is almost double what is expected from the theoretical distribution.
+A zero value means that the two logging nodes received the transaction
+from the peer node at almost the same time.
+
+\begin{figure}[H]
+\caption{Histogram of time difference between tx receipt}
+\label{fig-skellam-histogram-tx-p2p-msg}
+\centering{}\includegraphics[scale=0.5]{images/skellam-histogram-tx-p2p-msg}
+\end{figure}
 
 \bibliographystyle{apalike-ejor}
 \bibliography{monero-black-marble-flood}
