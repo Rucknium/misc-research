@@ -1,0 +1,1639 @@
+---
+title: "Hard Data on Banking the Unbanked through Cryptocurrency"
+author: "Rucknium"
+date: "Monerotopia 2024"
+output: 
+  beamer_presentation:
+    theme: CambridgeUS
+    colortheme: dracula
+    keep_tex: true
+    fig_width: 16
+    fig_height: 7.5
+header-includes:
+- \usepackage{array}
+- \usepackage{caption}
+- \usepackage{graphicx}
+- \usepackage{siunitx}
+- \usepackage[normalem]{ulem}
+- \usepackage{colortbl}
+- \usepackage{multirow}
+- \usepackage{hhline}
+- \usepackage{calc}
+- \usepackage{tabularx}
+- \usepackage{threeparttable}
+- \usepackage{wrapfig}
+- \usepackage{adjustbox}
+- \usepackage{hyperref}
+- \setbeamertemplate{caption}[unnumbered]
+- \geometry{paperheight=9cm,paperwidth=16cm}
+- \setbeamersize{text margin left=0.2cm,text margin right=0.2cm}
+- \AtBeginSection{}
+- \AtBeginDocument{\title[Banking the Unbanked through Cryptocurrency]{Hard Data on Banking the Unbanked through Cryptocurrency}}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+# remotes::install_github("dracula/ggplot2")
+
+library(data.table)
+library(ggplot2)
+library(ggDracula)
+library(survey)
+library(stargazer)
+library(huxtable)
+library(rvest)
+library(ggcorrplot)
+library(grid)
+
+SPACE.diary.survey <- readRDS("processed-data/SPACE-diary.rds")
+
+SPACE.survey <- readRDS("processed-data/SPACE.rds")
+
+SHED <- readRDS("processed-data/SHED.rds")
+
+reason.owns.crypto <- readRDS("processed-data/reason-owns-crypto.rds")
+
+aggregate.crypto.spending.clustered <- readRDS("processed-data/EU-aggregate-crypto-spending.rds")
+
+crypto.used.as.payment_annual.trend <- readRDS("processed-data/SHED-annual-trend.rds")
+
+monero.orange <- "#FF6600FF"
+
+dracula.palette <- dracula_tibble$hex
+names(dracula.palette) <- dracula_tibble$palette
+
+monero.orange <- dracula.palette[["red"]]
+
+odds.ratio.percent <- function(x) {
+  round(100 * (exp(x) - 1), 1)
+}
+
+
+prep.reg.table <- function(x, size = "7cm", highlighted.cells, top.matter.rows = 4) {
+  
+  x <- html_table(rvest::read_html(paste(x, collapse = "\n")), header = TRUE)[[1]] |>
+    huxtable() |>
+    set_all_padding(value = 0)
+  
+  z <- as.data.frame(x)
+  
+  coef.rows <- which(z[(top.matter.rows + 1):nrow(z), 2] == "")[1] + top.matter.rows
+
+  x <- set_align(x, row = (top.matter.rows + 1):nrow(x), col = 2:ncol(x), value = c("."))
+  # Replace nrow(coef.rows) with coef.rows if want to keep the parts of the
+  # table below the coef table to left alignment
+  
+  for ( i in seq_len(nrow(highlighted.cells))) {
+    
+    x <- set_background_color(x,
+      highlighted.cells$row[i] + top.matter.rows,
+      highlighted.cells$column[i],
+      highlighted.cells$color[i])
+    
+  }
+    
+  x <- to_latex(x, tabular_only = TRUE)
+  
+  x <- gsub("```{=latex}", "", x, fixed = TRUE)
+  x <- gsub("```", "", x, fixed = TRUE)
+  
+  paste0("\\resizebox{", size, "}{!}{", x, "}")
+  
+}
+
+
+```
+
+# Introduction
+
+## "Financial tech" apps are failing to serve the unbanked
+
+\begin{quote}
+  Adults [in the USA] without bank accounts are far less likely to be using a payment app compared to other adults: half as likely to have any sort of payment app, about a third as likely to have PayPal, and highly unlikely to have Venmo....This slow uptake of payment apps is notable because many commenters have been expecting fintech to create new, cost-effective, and convenient avenues of access for people without access to traditional bank accounts. 
+\end{quote}
+
+\vskip5mm
+\hspace*\fill{\small--- Claire Greene, Federal Reserve Bank of Atlanta, 2023}
+
+
+## Is cryptocurrency the answer?
+
+\begin{quote}
+  A purely peer-to-peer version of electronic cash would allow online payments to be sent directly from one party to another without going through a financial institution. 
+\end{quote}
+
+\vskip5mm
+\hspace*\fill{\small--- Satoshi Nakamoto, 2008}
+
+
+## About me, Rucknium
+
+- I'm an empirical microeconomist affiliated with the Monero Research Lab
+
+- I research improvements to Monero's privacy and security, using statistical analysis
+
+- Some of my work is funded by Monero's Community Crowdfunding System (CCS), but the research in this talk was done unfunded on my own time.
+
+- Slides available at: \url{https://github.com/Rucknium/presentations}
+
+- Code to reproduce the statistical analysis:
+
+- \scriptsize \url{https://github.com/Rucknium/misc-research/tree/main/Banking-the-Unbanked-through-Cryptocurrency}
+
+## Banking the unbanked?
+
+- Digital payments are increasingly important for accessing the necessities of modern life, but not everyone can get credit cards and bank accounts.
+
+- In theory, cryptocurrencies can fill the digital payments gap for people on the margins of the financial system.
+
+- But in practice do people who lack traditional bank accounts actually tend to use cryptocurrency for payments?
+
+- According to new high-quality data from the USA and EU, the answer may be "Yes".
+
+## Research questions
+
+- Using data from rigorous surveys, what share of people are using cryptocurrencies at all?
+
+  - This is the "extensive margin"
+  
+  - Available in USA and EU data
+
+
+- For people who use cryptocurrencies, how much are they spending?
+
+  - This is the "intensive margin"
+  
+  - Available in EU data only
+
+
+
+## Research questions
+
+- What are the general demographics (gender, age) of people using cryptocurrencies?
+
+- Controlling for demographics and country, do people with low access to the traditional financial system tend to use cryptocurrencies more?
+
+- What motivates people to use cryptocurrencies as a means of payment?
+
+
+
+
+## Data sources
+
+- USA: Survey of Household Economics and Decisionmaking (SHED)
+
+  - Cryptocurrency questions in 2021, 2022, and 2023
+
+
+- EU: Study on the Payment Attitudes of Consumers in the Euro Area (SPACE)
+
+  - Cryptocurrency questions in 2022
+
+
+- The surveys are conducted on behalf of the USA and EU central banks
+
+
+## We need quality data
+
+- There are some other data sets collected by private groups that focus on cryptocurrency users, but:
+
+  - Recruitment processes focused too much on cryptocurrency users can bias results
+  
+  - The survey methodology does not represent a statistical population
+  
+  - A small sample size means that few results are statistically significant
+
+  
+- The USA and EU central bank surveys:
+
+  - Have rigorous, balanced recruitment processes
+  
+  - Do not focus only on cryptocurrency users
+  
+  - Have large sample sizes
+
+
+- Their survey methodology will be described in detail.
+  
+  
+## Limitations of this research
+
+- Compared to the rest of the world, a larger share of people are already "banked" in the USA and EU
+
+- Statistical methods here measure the association and correlation of variables, but not a measurement of $X$ "causing" $Y$
+
+  - We do not have a natural experiment or other circumstances that would allow interpretation of the results as causation.
+
+- Lessons for promoting adoption are unclear
+
+  - If a group is already using cryptocurrency more than other groups, maybe adoption efforts can focus on that group
+  
+  - But if a group uses cryptocurrency less, maybe that's an untapped market that would respond to adoption efforts
+
+
+# USA SHED 2021 - 2023 data
+
+
+## USA SHED 2021 - 2023
+
+- "Since 2013, the Federal Reserve Board has conducted the Survey of Household Economics and Decisionmaking (SHED), which measures the economic well-being of U.S. households and identifies potential risks to their finances. The survey includes modules on a range of topics of current relevance to financial well-being including credit access and behaviors, savings, retirement, economic fragility, and education and student loans."
+
+
+
+## USA SHED methodology
+
+- "The SHED is sponsored by the Board of Governors of the Federal Reserve System."
+
+- "Staff of the Federal Reserve Board wrote the survey questions in consultation with other Federal Reserve System staff, outside academics, and professional survey experts."
+
+- "Ipsos, a private consumer research firm, administered the survey using its KnowledgePanel, a nationally representative probability-based online panel. Since 2009, Ipsos has selected respondents for KnowledgePanel based on address-based sampling (ABS). SHED respondents were then selected from this panel."
+
+## USA SHED methodology
+
+- "According to Ipsos, 9.7 percent of individuals contacted to join KnowledgePanel agreed to join (study-specific recruitment rate)....Among those who agreed to join the panel, 61.0 percent completed the initial profile survey and became a panel member (study-specific profile rate)....Taking all the stages of recruitment together, the cumulative response rate was 4.1 percent."
+
+- "To increase survey participation and completion among hard-to-reach demographic groups, Board staff and Ipsos used a targeted communication plan with monetary incentives. The target groups — young adults ages 18 to 29; adults with less than a high school degree; adults with household income under $50,000 who are under age 60; and those who are a race or ethnicity other than White, non-Hispanic — received additional email reminders during the field period, as well as additional monetary incentives."
+
+## USA SHED methodology
+
+- "All survey respondents not in a target group received a $5 incentive payment after survey completion. Respondents in the target groups received a $15 incentive."
+
+- "The 'digital divide' and other differences in internet usage could bias participation in online surveys, so recruited panel members who did not have a computer or internet access were provided with a laptop and access to the internet to complete the surveys."
+
+
+
+\scriptsize DOI: https://doi.org/10.17016/datasets.002
+
+## USA SHED sample sizes
+
+- Survey respondents could stay in the sample from one year to the next. Most survey respondents stayed in the sample for only one year. (The data is panel/longitudinal with high attrition.)
+
+- Sample size:
+  - 2021: 11,400
+  
+  - 2022: 11,667
+    - 3,752 total were also in the 2021 sample
+    
+  - 2023: 11,400
+    - 3,295 total were also in the 2021 sample
+    - 3,870 total were also in the 2022 sample
+
+- I pool together the responses for multiple years to increase the sample size. Each person's response is included only once if they are in the data in multiple years.
+
+## USA SHED 2021 - 2023 Cryptocurrency survey questions
+
+- Basic cryptocurrency questions added in 2021
+
+- Added more cryptocurrency questions in 2022
+
+- Removed a few cryptocurrency questions in 2023. No new ones added.
+
+
+## USA SHED 2021 - 2023 Cryptocurrency survey questions
+
+- Question: In the past year, have you done the following with cryptocurrency, such as Bitcoin or Ethereum?
+
+  - Bought cryptocurrency or held as an investment
+  
+  - Used cryptocurrency to buy something or make a payment
+  
+  - Used cryptocurrency to send money to friends or family 
+
+
+
+
+
+
+## Cryptocurrency use {.fragile}
+
+
+```{r echo=FALSE}
+
+# NOTE: All cell indices are hardcoded
+
+any.crypto.use <- round(100 * as.data.frame(svymean(~I(crypto.used.as.investment | crypto.used.as.payment), design = SHED, na.rm = TRUE))[2, 1], 1)
+
+only.as.investment <- round(100 * as.data.frame(svyby(~I(crypto.used.as.investment & ! crypto.used.as.payment),
+  ~I(crypto.used.as.investment | crypto.used.as.payment), design = SHED, svymean))[2, 3])
+
+only.as.payment <- round(100 * as.data.frame(svyby(~I(! crypto.used.as.investment & crypto.used.as.payment),
+  ~I(crypto.used.as.investment | crypto.used.as.payment), design = SHED, svymean))[2, 3])
+
+as.both <- round(100 * as.data.frame(svyby(~I(crypto.used.as.investment & crypto.used.as.payment),
+  ~I(crypto.used.as.investment | crypto.used.as.payment), design = SHED, svymean))[2, 3])
+
+
+```
+
+- `r any.crypto.use` percent of people have used cryptocurrency as investment or payment in the past year.
+
+- Of those who have used cryptocurrency as investment or payment:
+
+  - `r only.as.investment` percent for **investment only**
+  
+  - `r only.as.payment` percent for **payment only**
+  
+  - `r as.both` percent for **both purposes**
+
+## Cryptocurrency use {.fragile}
+
+
+```{r echo=FALSE}
+
+crypto.used.to.send.money <- round(100 * as.data.frame(svymean(~crypto.used.to.send.money, design = SHED, na.rm = TRUE))[2, 1], 1)
+
+crypto.used.to.send.money.outside.us <- round(100 * as.data.frame(svyby(~I(crypto.used.to.send.money.outside.us %in% TRUE),
+  ~I(! is.na(CaseID.2022) | ! is.na(CaseID.2023)), design = SHED, svymean, na.rm = TRUE))[2, 3], 1)
+# Need this because some questions were not asked in all years,
+# and things are not tracked properly without this complicated syntax
+
+
+crypto.used.as.payment.in.person <- round(100 * as.data.frame(svyby(~I(crypto.used.as.payment.in.person %in% TRUE),
+  ~I(! is.na(CaseID.2022)), design = SHED, svymean, na.rm = TRUE))[2, 3], 1)
+
+crypto.used.as.payment.online <- round(100 * as.data.frame(svyby(~I(crypto.used.as.payment.online %in% TRUE),
+  ~I(! is.na(CaseID.2022)), design = SHED, svymean, na.rm = TRUE))[2, 3], 1)
+
+crypto.used.as.payment.online.bill.pay <- round(100 * as.data.frame(svyby(~I(crypto.used.as.payment.online.bill.pay %in% TRUE),
+  ~I(! is.na(CaseID.2022)), design = SHED, svymean, na.rm = TRUE))[2, 3], 1)
+
+crypto.atm.convert.cash.to.crypto <- round(100 * as.data.frame(svyby(~I(crypto.atm.convert.cash.to.crypto %in% TRUE),
+  ~I(! is.na(CaseID.2022)), design = SHED, svymean, na.rm = TRUE))[2, 3], 1)
+
+crypto.atm.withdraw.cash <- round(100 * as.data.frame(svyby(~I(crypto.atm.withdraw.cash %in% TRUE),
+  ~I(! is.na(CaseID.2022)), design = SHED, svymean, na.rm = TRUE))[2, 3], 1)
+
+crypto.atm.make.payment <- round(100 * as.data.frame(svyby(~I(crypto.atm.make.payment %in% TRUE),
+  ~I(! is.na(CaseID.2022)), design = SHED, svymean, na.rm = TRUE))[2, 3], 1)
+
+crypto.atm.send.money <- round(100 * as.data.frame(svyby(~I(crypto.atm.send.money %in% TRUE),
+  ~I(! is.na(CaseID.2022)), design = SHED, svymean, na.rm = TRUE))[2, 3], 1)
+
+```
+
+
+- `r crypto.used.to.send.money` percent used cryptocurrency to send money to friends or family (2021 - 2023)
+
+- `r crypto.used.to.send.money.outside.us` percent used cryptocurrency to send money to friends or family living outside the USA (2022 - 2023)
+
+##  Cryptocurrency use {.fragile}
+
+- `r crypto.used.as.payment.in.person` percent used cryptocurrency to buy something in-person (2022 only)
+
+- `r crypto.used.as.payment.online` percent used cryptocurrency to buy something online (2022 only)
+
+- `r crypto.used.as.payment.online.bill.pay` percent used cryptocurrency to pay a bill online (2022 only)
+
+##  Cryptocurrency use {.fragile}
+
+Using a cryptocurrency ATM:
+
+- `r crypto.atm.convert.cash.to.crypto` percent used to convert cash to cryptocurrency (2022 only)
+
+- `r crypto.atm.withdraw.cash` percent used to withdraw cash (2022 only)
+
+- `r crypto.atm.make.payment` percent used to make a payment (2022 only)
+
+- `r crypto.atm.send.money` percent used to send money to friends or family (2022 only)
+
+
+
+
+
+
+
+## Confounding correlations: Cryptocurrency, age, gender, and banking {.fragile}
+
+```{r echo=FALSE}
+
+svyvar.covariance <- svyvar(~ 
+    lacks.bank.account + lacks.credit.card + age + is.male  + crypto.used.as.payment, SHED, na.rm = TRUE)
+attr(svyvar.covariance, "var") <- NULL
+svyvar.correlation <- cov2cor(as.matrix(svyvar.covariance))
+colnames(svyvar.correlation) <- rownames(svyvar.correlation) <- c(
+  "Lacks bank account", "Lacks credit card", "Age", "Is male", "Crypto used as payment")
+
+
+ggcorrplot(t(svyvar.correlation),
+  type = "upper", lab = TRUE, lab_size = 8,
+  legend.title = "Correlation",
+  colors = c(dracula.palette[["red"]], "white", dracula.palette[["green"]]),
+  ggtheme = theme_dracula) +
+  scale_x_discrete(position = "top") +
+  # ggtitle("Correlation Matrix of Financial Marginalization\nand Use of Cryptocurrency as a Means of Payment") +
+  theme(axis.text.x = element_text(size = 20, angle = 25, hjust = 0),
+    axis.text.y = element_text(size = 20),
+    plot.title = element_text(size = 40),
+    plot.subtitle = element_text(size = 20),
+    legend.title = element_text(size = 20, color = "white"),
+    legend.text = element_text(size = 20),
+    legend.key.size = unit(30, "pt"),
+    plot.margin = margin(t = 0, r = 0, b = 75, l = 0, unit = "pt"),
+    plot.background = element_rect(color = NA))
+
+
+```
+
+
+
+
+## Being careful about confounding variables
+
+- The correlations between demographics, cryptocurrency use, and use of the traditional financial systems can cause omitted variable bias
+
+- We use a statistical method to "control for" demographics and other confounding variables: Logistic regression (Logit)
+
+
+
+## Logistic regression
+
+- Logistic regression allows us to estimate how variables are associated with a difference in the odds of a person's choice to do something or not. Or of any outcome.
+
+- The "odds" provides a number that is easy to interpret even if the probability of something is low to begin with.
+
+- For example, some environmental toxin may increase the odds of a rare cancer by 100 percent (i.e. going from 0.1% to 0.2% probability). People who are exposed to the environmental toxin still have a low chance of getting the rare cancer, but the _odds_ are much higher.
+
+- It makes sense to use odds instead of raw probability because use of cryptocurrency is rare.
+
+
+## Logistic regression
+
+- The odds of an event is the probability of the event happening divided by the probability of the event not happening.
+
+- The results of the logistic regression will be given as "People who have characteristic $X$ have $Z$ percent higher (or lower) odds of doing $Y$."
+
+- Or "One more year of age is associated with $Z$ percent higher (or lower) odds of doing $Y$."
+
+- Remember that odds can decrease by 100 percent at most. Odds can increase to 1,000 or even a million percent. (Percent increase is unbounded.)
+
+
+## Logistic regression
+
+- Formally, the results will transform the $\hat{\beta}$ estimated coefficients of the Logistic regressions:
+
+$$\left(e^{\hat{\beta}}-1\right)\times100\%$$
+
+- The significance stars (`*`) are for the $\hat{\beta}$ coefficients.
+
+  - `*`, `**`, and `***` stars are for statistical significance at the 10%, 5%, and 1% levels, respectively.
+  
+  - If a coefficient has no stars, it can basically be ignored in the results.
+
+
+
+
+
+
+## Odds of owning cryptocurrency and payment use, by gender and age {.fragile}
+
+```{r echo=FALSE}
+
+svyglm.fit.1 <- svyglm(crypto.used.as.investment ~ is.male + age, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+
+svyglm.fit.2 <- svyglm(crypto.used.as.payment ~  is.male + age, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+
+
+stargazer.output <- capture.output(
+stargazer(svyglm.fit.1, svyglm.fit.2, apply.coef = odds.ratio.percent, report = "vc*", p.auto = FALSE,
+  no.space = TRUE, digits = 1, omit.table.layout = "n", model.numbers = FALSE,
+  omit = c("(Constant)"), covariate.labels = c("Male", "Age"),
+  dep.var.labels = c("Dependent var:", "Dependent var:"),
+  column.labels = c("Uses crypto as investment", "Uses crypto as payment"), dep.var.caption = "",
+  type = "html")
+)
+
+prepped.output <- prep.reg.table(stargazer.output, size = "14cm",
+  highlighted.cells = data.frame(row = 1, column = 1:3, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+## Odds of using cryptocurrency as payment, by gender and age {.fragile}
+
+```{r echo=FALSE}
+
+
+prepped.output <- prep.reg.table(stargazer.output, size = "14cm",
+  highlighted.cells = data.frame(row = 2, column = 1:3, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+
+
+
+## Odds of using cryptocurrency as payment, by traditional banking {.fragile}
+
+```{r echo=FALSE}
+
+svyglm.fit.1 <- svyglm(crypto.used.as.payment ~ age + is.male + lacks.bank.account, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+
+svyglm.fit.2 <- svyglm(crypto.used.as.payment ~ age + is.male + lacks.credit.card, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+
+
+stargazer.output <- capture.output(
+stargazer(svyglm.fit.1, svyglm.fit.2, apply.coef = odds.ratio.percent, report = "vc*", p.auto = FALSE,
+  no.space = TRUE, digits = 1, omit.table.layout = "n", model.numbers = FALSE,
+  omit = c("(Constant)|(is.male)", "age"),
+  covariate.labels = c("Lacks bank account", "Lacks credit card"),
+  dep.var.labels = c("Dependent var:", "Dependent var:"),
+  column.labels = c("Uses crypto as payment", "Uses crypto as payment"), dep.var.caption = "",
+  omit.labels = c("Gender control variable", "Age control variable"), type = "html")
+)
+
+prepped.output <- prep.reg.table(stargazer.output, size = "14cm",
+  highlighted.cells = data.frame(row = 1, column = 1:2, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+
+## Odds of using cryptocurrency as payment, by traditional banking {.fragile}
+
+```{r echo=FALSE}
+
+
+prepped.output <- prep.reg.table(stargazer.output, size = "14cm",
+  highlighted.cells = data.frame(row = 2, column = 1:3, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+
+
+
+## Odds of using cryptocurrency as payment, by non-bank checking {.fragile}
+
+```{r echo=FALSE}
+
+svyglm.fit.1 <- svyglm(crypto.used.as.payment ~ age + is.male + cash.check.non.bank, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+
+svyglm.fit.2 <- svyglm(crypto.used.as.payment ~ age + is.male + purchase.non.bank.money.order, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+
+
+stargazer.output <- capture.output(
+stargazer(svyglm.fit.1, svyglm.fit.2, apply.coef = odds.ratio.percent, report = "vc*", p.auto = FALSE,
+  no.space = TRUE, digits = 1, omit.table.layout = "n", model.numbers = FALSE,
+  omit = c("(Constant)|(is.male)", "age"),
+  covariate.labels = c("Bought non-bank money order", "Cashed check at non-bank"),
+  dep.var.labels = c("Dependent var:", "Dependent var:"),
+  column.labels = c("Uses crypto as payment", "Uses crypto as payment"), dep.var.caption = "",
+  omit.labels = c("Gender control variable", "Age control variable"), type = "html")
+)
+
+prepped.output <- prep.reg.table(stargazer.output, size = "14cm",
+  highlighted.cells = data.frame(row = 1, column = 1:2, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+
+
+## Odds of using cryptocurrency as payment, by non-bank checking {.fragile}
+
+```{r echo=FALSE}
+
+
+prepped.output <- prep.reg.table(stargazer.output, size = "14cm",
+  highlighted.cells = data.frame(row = 2, column = 1:3, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+
+
+
+## Odds of using cryptocurrency as payment, by non-bank loan {.fragile}
+
+```{r echo=FALSE}
+
+svyglm.fit.1 <- svyglm(crypto.used.as.payment ~ age + is.male + take.payday.loan, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+
+svyglm.fit.2 <- svyglm(crypto.used.as.payment ~ age + is.male + take.auto.or.pawn.shop.loan, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+
+svyglm.fit.3 <- svyglm(crypto.used.as.payment ~ age + is.male + used.buy.now.pay.later, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+
+svyglm.fit.4 <- svyglm(crypto.used.as.payment ~ age + is.male + take.tax.refund.advance, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+
+
+stargazer.output <- capture.output(
+stargazer(svyglm.fit.1, svyglm.fit.2, svyglm.fit.3, svyglm.fit.4, apply.coef = odds.ratio.percent, report = "vc*", p.auto = FALSE,
+  no.space = TRUE, digits = 1, omit.table.layout = "n", model.numbers = FALSE,
+  omit = c("(Constant)|(is.male)", "age"),
+  covariate.labels = c("Took payday loan", "Took auto or pawn shop loan", 
+    "Used buy now, pay later", "Took tax refund advance"),
+  # dep.var.labels = rep("", 4),
+  # column.labels = rep("", 4),
+  dep.var.caption = "", dep.var.labels.include = FALSE,
+  omit.labels = c("Gender control variable", "Age control variable"), type = "html")
+)
+
+prepped.output <- prep.reg.table(stargazer.output, size = "16cm",
+  highlighted.cells = data.frame(row = 1, column = 1:2, color = monero.orange), top.matter.rows = 1)
+
+knitr::asis_output(prepped.output)
+
+```
+
+
+
+## Odds of using cryptocurrency as payment, by non-bank loan {.fragile}
+
+```{r echo=FALSE}
+
+
+prepped.output <- prep.reg.table(stargazer.output, size = "16cm",
+  highlighted.cells = data.frame(row = 2, column = 1:3, color = monero.orange), top.matter.rows = 1)
+
+knitr::asis_output(prepped.output)
+
+```
+
+
+## Odds of using cryptocurrency as payment, by non-bank loan {.fragile}
+
+```{r echo=FALSE}
+
+
+prepped.output <- prep.reg.table(stargazer.output, size = "16cm",
+  highlighted.cells = data.frame(row = 3, column = 1:4, color = monero.orange), top.matter.rows = 1)
+
+knitr::asis_output(prepped.output)
+
+```
+
+
+## Odds of using cryptocurrency as payment, by non-bank loan {.fragile}
+
+```{r echo=FALSE}
+
+
+prepped.output <- prep.reg.table(stargazer.output, size = "16cm",
+  highlighted.cells = data.frame(row = 4, column = 1:5, color = monero.orange), top.matter.rows = 1)
+
+knitr::asis_output(prepped.output)
+
+```
+
+
+
+
+
+## Odds of using cryptocurrency as payment, by credit access {.fragile}
+
+```{r echo=FALSE}
+
+
+svyglm.fit.1 <- svyglm(crypto.used.as.payment ~ age + is.male + perceived.credit.score, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+
+svyglm.fit.2 <- svyglm(crypto.used.as.payment ~ age + is.male + rejected.for.credit, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+
+svyglm.fit.3 <- svyglm(crypto.used.as.payment ~ age + is.male + experienced.discrimination, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+
+svyglm.fit.4 <- svyglm(crypto.used.as.payment ~ age + is.male + experienced.discrimination.in.banking, 
+  SHED, family = stats::quasibinomial(link = "logit"))
+
+
+
+stargazer.output <- capture.output(
+stargazer(svyglm.fit.1, svyglm.fit.2, svyglm.fit.3, svyglm.fit.4, apply.coef = odds.ratio.percent, report = "vc*", p.auto = FALSE,
+  no.space = TRUE, digits = 1, omit.table.layout = "n", model.numbers = FALSE,
+  omit = c("(Constant)|(is.male)", "age"),
+  covariate.labels = c("Credit score: Excellent", "Credit score: Good", "Credit score: Poor",
+    "Credit score: Very poor", "Credit score: Don't know",
+    "Rejected for credit", "Experienced any discrimination", "Experienced discrimination in banking"),
+  # dep.var.labels = rep("", 4),
+  # column.labels = rep("", 4),
+  dep.var.caption = "", dep.var.labels.include = FALSE,
+  # notes = c("Credit score reference", "level is 'Fair'"), notes.append = FALSE,
+  omit.labels = c("Gender control variable", "Age control variable"), type = "html")
+)
+
+prepped.output <- prep.reg.table(stargazer.output, size = "16cm",
+  highlighted.cells = data.frame(row = c(1, 1, 2, 2), column = c(1, 2, 1, 2), color = monero.orange), top.matter.rows = 1)
+
+knitr::asis_output(prepped.output)
+
+```
+\scriptsize Note: Credit score reference level is 'Fair'
+
+
+## Odds of using cryptocurrency as payment, by credit access {.fragile}
+
+```{r echo=FALSE}
+
+
+prepped.output <- prep.reg.table(stargazer.output, size = "16cm",
+  highlighted.cells = data.frame(row = 6, column = 1:3, color = monero.orange), top.matter.rows = 1)
+
+knitr::asis_output(prepped.output)
+
+```
+\scriptsize Note: Credit score reference level is 'Fair'
+
+## Odds of using cryptocurrency as payment, by credit access {.fragile}
+
+```{r echo=FALSE}
+
+
+prepped.output <- prep.reg.table(stargazer.output, size = "16cm",
+  highlighted.cells = data.frame(row = 7, column = 1:4, color = monero.orange), top.matter.rows = 1)
+
+knitr::asis_output(prepped.output)
+
+```
+\scriptsize Note: Credit score reference level is 'Fair'
+
+## Odds of using cryptocurrency as payment, by credit access {.fragile}
+
+```{r echo=FALSE}
+
+
+prepped.output <- prep.reg.table(stargazer.output, size = "16cm",
+  highlighted.cells = data.frame(row = 8, column = 1:5, color = monero.orange), top.matter.rows = 1)
+
+knitr::asis_output(prepped.output)
+
+```
+\scriptsize Note: Credit score reference level is 'Fair'
+
+
+## Reasons for using cryptocurrency as payment 
+
+
+- Question: "What was the main reason you used cryptocurrency to buy something, make a payment, or send money?" (2022 - 2023)
+
+- These are mutually exclusive reasons. Respondents had to choose just _one_ main reason.
+
+
+
+
+## Reasons for using cryptocurrency as payment {.fragile}
+
+```{r echo=FALSE}
+
+
+why.used.crypto.as.payment.table <- as.data.frame(svymean(~why.used.crypto.as.payment, design = SHED, na.rm = TRUE))
+
+why.used.crypto.as.payment.table <- why.used.crypto.as.payment.table[order(why.used.crypto.as.payment.table$mean, decreasing = TRUE), ]
+
+reasons.raw <- c("why.used.crypto.as.paymentPerson or business receiving the money preferred cryptocurrency", 
+  "why.used.crypto.as.paymentTo send the money faster", "why.used.crypto.as.paymentPrivacy", 
+  "why.used.crypto.as.paymentCheaper", "why.used.crypto.as.paymentOther (please specify)", 
+  "why.used.crypto.as.paymentSafer", "why.used.crypto.as.paymentDon’t trust banks")
+
+reasons.display <- c("Recipient preferred cryptocurrency", 
+  "To send the money faster", "Privacy", 
+  "Cheaper", "Other reasons", 
+  "Safer", "Don’t trust banks")
+
+colnames(why.used.crypto.as.payment.table) <- c("Share", "Standard error of share")
+
+why.used.crypto.as.payment.table <- cbind(Reason = reasons.display[match(rownames(why.used.crypto.as.payment.table), reasons.raw)],
+  why.used.crypto.as.payment.table)
+
+row.names(why.used.crypto.as.payment.table) <- NULL
+
+
+why.used.crypto.as.payment.table <- huxtable(why.used.crypto.as.payment.table) |>
+  set_align(row = 2:3, col = 2:3, value = ".") |>
+  set_number_format(col = 2:3, value = fmt_percent(1)) |>
+  # set_all_padding(value = 0) |>
+  set_bottom_border(row = 1, value = 0.4) |>
+  set_bottom_border_style(row = 1, value = "solid") |>
+  set_bold(row = 1, value = TRUE)
+
+why.used.crypto.as.payment.table
+
+
+
+```
+
+
+## US SHED Summary
+
+- Most people who have used cryptocurrency are using it as an investment instead as a means of payment
+
+- Being young and male is associated with cryptocurrency utilization
+
+- There were a lot of ways to measure financial marginalization, from having a bank account to getting payday loans
+
+- Almost every metric showed that people who are on the fringes of the traditional financial system are more likely to use cryptocurrency as payment 
+
+
+
+
+
+# EU SPACE 2022 data
+
+
+## EU SPACE
+
+- "The study on the payment attitudes of consumers in the euro area (SPACE) looks at how consumers use different payment methods in euro area countries. It also explores their payment preferences and perceptions concerning access to and acceptance of these means of payment. SPACE helps the European Central Bank to understand consumer demand and evolving market trends and facilitates the implementation of the Eurosystem’s cash and payments strategies."
+
+- "The study was first conducted in 2019 and follow-up SPACE studies will be carried out on a regular basis to continue our research on payment trends."
+
+
+
+## EU SPACE methodology
+
+- "The fieldwork was carried out by the market research company Kantar Public in 17 of the 19 euro area countries (i.e. with the exception of Germany and the Netherlands)."
+
+- Germany and Netherlands conduct their own similar survey, but that data isn't included in SPACE.
+
+- There is a general questionnaire and a one-day diary of purchases.
+
+- "SPACE 2022 was a mixed-mode survey. Recruitment and interviews were conducted in two different modes; computer-assisted telephone interview and computer-assisted web interview."
+
+
+## EU SPACE 2022 sample size
+
+- 39,766 total respondents
+
+- 7,371 online purchases recorded in the one-day purchasing diary
+  - Respondents were supposed to exclude recurring payments like phone bills
+  
+  - Each respondent could record up to 10 online purchases in the one-day diary
+
+
+
+
+## EU cryptocurrency use {.fragile}
+
+
+```{r echo=FALSE}
+
+has.crypto <- as.data.frame(svymean(~has.crypto, SPACE.survey))
+
+has.crypto <- round(100 * has.crypto["has.cryptoYes", "mean"], 1)
+
+crypto.use <- as.data.frame(svyby(~crypto.use, ~I(crypto.use != "None"), design = SPACE.survey, svymean))
+
+crypto.useInvestment <- round(100 * crypto.use["TRUE", "crypto.useInvestment"], 1)
+
+crypto.usePayment <- round(100 * crypto.use["TRUE", "crypto.usePayment"], 1)
+
+crypto.useBoth <- round(100 * crypto.use["TRUE", "crypto.useBoth"], 1)
+
+
+```
+
+- `r has.crypto` percent of people have cryptocurrency
+
+- Of those who have cryptocurrency, they have it for these purposes:
+
+  - `r crypto.useInvestment` percent for **investment only**
+  
+  - `r crypto.usePayment` percent for **payment only**
+  
+  - `r crypto.useBoth` percent for **both purposes**
+
+## Cryptocurrency ownership by country
+
+```{r echo=FALSE}
+
+country.has.crypto <- as.data.frame(svyby(~has.crypto, ~COUNTRY.name,
+  design = SPACE.survey, svyciprop, vartype = "ci", level = 0.90))
+
+country.has.crypto <- country.has.crypto[order(country.has.crypto$has.crypto, decreasing = TRUE), ]
+
+country.has.crypto$COUNTRY.name <- factor(country.has.crypto$COUNTRY.name, levels = country.has.crypto$COUNTRY.name)
+
+p <- ggplot(country.has.crypto, aes(x = COUNTRY.name, y = has.crypto)) +
+  geom_pointrange(aes(ymin = ci_l, ymax = ci_u), fatten = 15,
+    colour = dracula.palette["green"], linewidth = 1.5) +
+  ggtitle("Share of people owning cryptocurrency", subtitle = "Lines are 90% confidence intervals") + 
+  xlab("") + ylab("") +
+  scale_y_continuous(labels = scales::percent_format(), limits = c(0, NA), expand = c(0, 0)) +
+  scale_color_dracula(discrete = TRUE) +
+  theme_dracula() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text = element_text(size = 25),
+    plot.title = element_text(size = 40),
+    plot.subtitle = element_text(size = 20),
+    plot.background = element_rect(color = NA))
+# The order of the themes() matter. Must have theme_dracula() first.
+# plot.background removes the border around the plot
+
+plot(p)
+
+
+```
+table.layout = "ld-t-0-s"
+
+
+## Cryptocurrency use as payment by country
+
+```{r echo=FALSE}
+
+country.crypto.use.payment <- as.data.frame(svyby(~I(crypto.use %in% c("Payment", "Both")),
+  ~COUNTRY.name, design = SPACE.survey, svyciprop, vartype = "ci", level = 0.90))
+
+colnames(country.crypto.use.payment)[2] <- "crypto.use.payment"
+
+country.crypto.use.payment <- country.crypto.use.payment[order(country.crypto.use.payment[, "crypto.use.payment"], decreasing = TRUE), ]
+
+country.crypto.use.payment$COUNTRY.name <- factor(country.crypto.use.payment$COUNTRY.name, levels = country.crypto.use.payment$COUNTRY.name)
+
+p <- ggplot(country.crypto.use.payment, aes(x = COUNTRY.name, y = crypto.use.payment)) +
+  geom_pointrange(aes(ymin = ci_l, ymax = ci_u), fatten = 15,
+    colour = dracula.palette["green"], linewidth = 1.5) +
+  ggtitle("Share of people using cryptocurrency as payment", subtitle = "Lines are 90% confidence intervals") + 
+  xlab("") + ylab("") +
+  scale_y_continuous(labels = scales::percent_format(), limits = c(0, NA), expand = c(0, 0)) +
+  scale_color_dracula(discrete = TRUE) +
+  theme_dracula() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text = element_text(size = 25),
+    plot.title = element_text(size = 40),
+    plot.subtitle = element_text(size = 20),
+    plot.background = element_rect(color = NA))
+
+plot(p)
+
+
+```
+
+
+## Odds of owning cryptocurrency and payment use, by gender and age {.fragile}
+
+```{r echo=FALSE}
+
+svyglm.fit.1 <- svyglm(has.crypto ~ Gender + Age + COUNTRY, 
+  SPACE.survey, family = stats::quasibinomial(link = "logit"))
+
+svyglm.fit.2 <- svyglm(I(crypto.use %in% c("Investment")) ~ Gender + Age + COUNTRY, 
+  SPACE.survey, family = stats::quasibinomial(link = "logit"))
+
+svyglm.fit.3 <- svyglm(I(crypto.use %in% c("Payment")) ~ Gender + Age + COUNTRY, 
+  SPACE.survey, family = stats::quasibinomial(link = "logit"))
+
+
+stargazer.output <- capture.output(
+stargazer(svyglm.fit.1, svyglm.fit.2, svyglm.fit.3, apply.coef = odds.ratio.percent, report = "vc*", p.auto = FALSE,
+  no.space = TRUE, digits = 1, omit.table.layout = "n", model.numbers = FALSE,
+  omit = c("(Constant)|(COUNTRY)"),
+  dep.var.labels = c("Dependent var:", "Dependent var:", "Dependent var:"),
+  column.labels = c("Owns crypto", "As investment only", "As payment only"), dep.var.caption = "",
+  omit.labels = c("Country control variable"), type = "html")
+)
+# Complicated args because need to prevent the extra line from the dep var label
+
+prepped.output <- prep.reg.table(stargazer.output, size = "14cm",
+  highlighted.cells = data.frame(row = 1, column = 1:4, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+
+## Odds of owning cryptocurrency and payment use, by gender and age {.fragile}
+
+```{r echo=FALSE}
+
+prepped.output <- prep.reg.table(stargazer.output, size = "14cm",
+  highlighted.cells = data.frame(row = 3, column = 1:4, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+## Gender and investment
+
+- Is the gender divide for using cryptocurrency as an investment unique to cryptocurrency?
+
+- The survey also asked if respondents had "Stocks, mutual fund shares, bonds or similar financial investment products"
+
+
+## Odds of having a traditional financial investment, by gender and age {.fragile}
+
+
+```{r echo=FALSE}
+
+svyglm.fit <- svyglm(has.financial.investments ~ Gender + Age + COUNTRY, 
+  SPACE.survey, family = stats::quasibinomial(link = "logit"))
+
+stargazer.output <- capture.output(
+stargazer(svyglm.fit, apply.coef = odds.ratio.percent, report = "vc*", p.auto = FALSE,
+  no.space = TRUE, digits = 1, omit.table.layout = "n", model.numbers = FALSE,
+  omit = c("(Constant)|(COUNTRY)"), 
+    dep.var.labels = c("Dependent var:"),
+  column.labels = c("Has investment"), dep.var.caption = "",
+  omit.labels = c("Country control variable"), type = "html")
+)
+
+prepped.output <- prep.reg.table(stargazer.output, size = "10cm",
+  highlighted.cells = data.frame(row = c(1,1,2,2), column = c(1,2,1,2), color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+
+## Odds of having a traditional financial investment, by gender and age {.fragile}
+
+```{r echo=FALSE}
+
+prepped.output <- prep.reg.table(stargazer.output, size = "10cm",
+  highlighted.cells = data.frame(row = 3, column = 1:2, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+
+## Odds of cryptocurrency payment use, by other financial services use {.fragile}
+
+```{r echo=FALSE}
+
+svyglm.fit.1 <- svyglm(I(crypto.use %in% c("Payment", "Both")) ~ I(has.card == "No") + Gender + Age + COUNTRY, 
+  SPACE.survey, family = stats::quasibinomial(link = "logit"))
+
+svyglm.fit.2 <- svyglm(I(crypto.use %in% c("Payment", "Both")) ~ I(has.payment.account == "No") + Gender + Age + COUNTRY, 
+  SPACE.survey, family = stats::quasibinomial(link = "logit"))
+
+stargazer.output <- capture.output(
+stargazer(svyglm.fit.1, svyglm.fit.2, apply.coef = odds.ratio.percent, report = "vc*", p.auto = FALSE,
+  no.space = TRUE, digits = 1, omit.table.layout = "n", model.numbers = FALSE,
+  covariate.labels = c("Lacks credit and debit card", "Lacks payment account"),
+  dep.var.labels = c("Dependent var:", "Dependent var:"),
+  column.labels = c("Uses crypto as payment", "Uses crypto as payment"), dep.var.caption = "",
+  omit = c("(Constant)|(Gender)", "Age", "COUNTRY"),
+  omit.labels = c("Gender control variable", "Age control variable", "Country control variable"), type = "html")
+)
+
+prepped.output <- prep.reg.table(stargazer.output, size = "14cm",
+  highlighted.cells = data.frame(row = 1, column = 1:2, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+
+## Payment preference: Cash vs. cashless
+
+- The EU SPACE survey did not ask why cryptocurrency users use it for payment.
+
+- Cryptocurrency is supposed to be "peer-to-peer electronic cash"
+
+  - Permissionless to spend and receive
+  
+  - Ownership is based on possession, not identity documents
+  
+  - No need to have an account with any institution
+  
+- How do attitudes toward cash interact with cryptocurrency use as payment?
+
+- Survey question:
+  - "If you were offered various payment methods in a shop, what would be your preference? Cash, card or other cashless payment, or no preference?"
+
+
+
+## Payment preference {.fragile}
+
+```{r echo=FALSE}
+
+svyglm.fit <- svyglm(I(crypto.use %in% c("Payment", "Both")) ~ PaymentPreference + Gender + Age + COUNTRY, 
+  SPACE.survey, family = stats::quasibinomial(link = "logit"))
+
+stargazer.output <- capture.output(
+stargazer(svyglm.fit, apply.coef = odds.ratio.percent, report = "vc*", p.auto = FALSE,
+  no.space = TRUE, digits = 1, notes.append = FALSE,  omit.table.layout = "n",
+  omit = c("(Constant)|(Gender)", "Age", "COUNTRY"),
+  dep.var.labels = c("Dependent var:"),
+  column.labels = c("Uses crypto as payment"), dep.var.caption = "",
+  omit.labels = c("Gender control variable", "Age control variable", "Country control variable"),
+  # notes = c("Reference level is", "'No preference'"),
+  type = "html")
+
+)
+
+prepped.output <- prep.reg.table(stargazer.output, size = "10cm",
+  highlighted.cells = data.frame(row = 1, column = 1:2, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+\scriptsize Note: Reference level is 'No preference'
+
+
+## Advantages of cash
+
+- "For you personally, what are the three most important advantages of cash as compared with card payments?"
+
+
+
+
+## Advantages of cash {.fragile}
+
+```{r echo=FALSE}
+
+svyglm.fit <- svyglm(I(crypto.use %in% c("Payment", "Both")) ~ cash.wide.acceptance +
+    cash.faster + cash.privacy + cash.easier + cash.safer + cash.immediately.settled +
+    cash.spending.awareness + cash.other + cash.no.use + cash.none + Gender + Age + COUNTRY, 
+  SPACE.survey, family = stats::quasibinomial(link = "logit"))
+
+stargazer.output <- capture.output(
+stargazer(svyglm.fit, apply.coef = odds.ratio.percent, report = "vc*", p.auto = FALSE,
+  no.space = TRUE, digits = 1, omit.table.layout = "n",
+  covariate.labels = c("Accepted more widely", "Faster", "Protects privacy", "Easier",
+    "Safer", "Immediately settled", "Makes me aware of my spending", "Other", "I don't use cash", "None"),
+  omit = c("(Constant)|(Gender)", "Age", "COUNTRY"),
+  dep.var.labels = c("Dependent var:"),
+  column.labels = c("Uses crypto as payment"), dep.var.caption = "",
+  omit.labels = c("Gender control variable", "Age control variable", "Country control variable"),
+  type = "html")
+
+)
+
+prepped.output <- prep.reg.table(stargazer.output, size = "7.25cm",
+  highlighted.cells = data.frame(row = 2, column = 1:2, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+
+## Payment preference {.fragile}
+
+```{r echo=FALSE}
+
+prepped.output <- prep.reg.table(stargazer.output, size = "7.25cm",
+  highlighted.cells = data.frame(row = 3, column = 1:2, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+
+
+## Payment preference {.fragile}
+
+```{r echo=FALSE}
+
+prepped.output <- prep.reg.table(stargazer.output, size = "7.25cm",
+  highlighted.cells = data.frame(row = 7, column = 1:2, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+## Behavior: Cash reserves
+
+- "Some people like to keep cash at home or somewhere else for various reasons, as precautionary reserve or as an alternative way of saving. Do you personally keep extra cash that is not in your wallet, purse or pocket?"
+
+- "Roughly how much cash do you generally keep at home or somewhere else that is not in your wallet, purse or pocket?"
+
+
+## Cash reserves {.fragile}
+
+```{r echo=FALSE}
+
+svyglm.fit <- svyglm(I(crypto.use %in% c("Payment", "Both")) ~ cash.reserves + factor(INCOME) + Gender + Age + COUNTRY, 
+  SPACE.survey, family = stats::quasibinomial(link = "logit"))
+
+
+cash.reserves <- c(
+  "€0",
+  "Less than €100",
+  "€100 - €250",
+  "€250 - €500",
+  "€500 - €1,000",
+  "€1,000 - €5,000",
+  "€5,000 - €10,000",
+  "More than €10,000"
+)
+
+
+stargazer.output <- capture.output(
+stargazer(svyglm.fit, apply.coef = odds.ratio.percent, report = "vc*", p.auto = FALSE,
+  no.space = TRUE, digits = 1, omit.table.layout = "n",
+  omit = c("(Constant)|(Gender)", "Age", "COUNTRY", "INCOME"),
+  dep.var.labels = c("Dependent var:"),
+  covariate.labels = cash.reserves[-1], 
+  column.labels = c("Uses crypto as payment"), dep.var.caption = "",
+  omit.labels = c("Gender control variable", "Age control variable", "Country control variable", "Income control variable"),
+  type = "html")
+
+)
+
+
+prepped.output <- prep.reg.table(stargazer.output, size = "6.5cm",
+  highlighted.cells = data.frame(row = c(1, 1, 5, 5, 7, 7), column = rep(1:2, 3), color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+\scriptsize Note: Reference level is '€0'
+
+
+
+
+## One-day online payments diary
+
+- "Please report any online payments you personally made on [INSERT DAY]. Please exclude any regular recurring payments such as rent, telephone or utility bills or subscriptions (streaming services, newspapers, etc)."
+
+- "How did you pay for this purchase?"
+  - ...
+  - Crypto-assets also known as crypto-currency (virtual assets, e.g. Bitcoin, Ethereum)
+  - ...
+
+
+
+## Online payments diary: Purpose {.fragile}
+
+```{r echo=FALSE}
+
+svyglm.fit <- svyglm(`Paid with crypto` ~ purpose + D1 + AGE + COUNTRY, 
+  SPACE.diary.survey, family = stats::quasibinomial(link = "logit"))
+
+stargazer.output <- capture.output(
+stargazer(svyglm.fit, apply.coef = odds.ratio.percent, report = "vc*", p.auto = FALSE,
+  no.space = TRUE, digits = 1, omit.table.layout = "n",
+  omit = c("(Constant)|(D)", "AGE", "COUNTRY"),
+  dep.var.labels = c("Dependent var:"),
+  column.labels = c("Paid with crypto"), dep.var.caption = "",
+  omit.labels = c("Gender control variable", "Age control variable", "Country control variable"), type = "html")
+
+)
+
+prepped.output <- prep.reg.table(stargazer.output, size = "8.5cm",
+  highlighted.cells = data.frame(row = 5, column = 1:2, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+
+## Online payments diary: Purpose {.fragile}
+
+```{r echo=FALSE}
+
+prepped.output <- prep.reg.table(stargazer.output, size = "8.5cm",
+  highlighted.cells = data.frame(row = 9, column = 1:2, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+## Online payments diary: Purpose {.fragile}
+
+```{r echo=FALSE}
+
+prepped.output <- prep.reg.table(stargazer.output, size = "8.5cm",
+  highlighted.cells = data.frame(row = 10, column = 1:2, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+## Online payments diary: Purpose {.fragile}
+
+```{r echo=FALSE}
+
+prepped.output <- prep.reg.table(stargazer.output, size = "8.5cm",
+  highlighted.cells = data.frame(row = 11, column = 1:2, color = monero.orange))
+
+knitr::asis_output(prepped.output)
+
+```
+
+## Online payments diary: Payment amount {.fragile}
+
+### **No statistical difference**
+
+```{r echo=FALSE}
+
+
+paid.with.crypto.mean <- svyby(~value, ~`Paid with crypto`, design = SPACE.diary.survey, svymean)
+paid.with.crypto.median <- svyby(~value, ~`Paid with crypto`, design = SPACE.diary.survey, svyquantile, quantile = 0.5)
+
+colnames(paid.with.crypto.mean)[2:3] <- c("Amount (€)", "Standard error")
+colnames(paid.with.crypto.median)[2:3] <- c("Amount (€)", "Standard error")
+
+paid.with.crypto.mean <- huxtable(paid.with.crypto.mean) |>
+  set_align(row = 2:3, col = 2:3, value = ".") |>
+  set_number_format(row = 2:3, col = 2:3, value = "%.2f") |>
+  set_all_padding(value = 0) |>
+  set_caption("Mean payment value")
+
+paid.with.crypto.mean
+
+paid.with.crypto.median <- huxtable(paid.with.crypto.median) |>
+  set_align(row = 2:3, col = 2:3, value = ".") |>
+  set_number_format(row = 2:3, col = 2:3, value = "%.2f") |>
+  set_all_padding(value = 0) |>
+  set_caption("Median payment value")
+
+paid.with.crypto.median
+
+```
+
+
+## Total value of cryptocurrency online payments in the EU
+
+- We can multiply the payments diary sample by each country's population to estimate the total value of cryptocurrency that was spent in online transactions for goods and services in 2022 in the EU.
+
+- This is the first reliable estimate of aggregate cryptocurrency spending in a large geographic region that I am aware of.
+
+- Estimate: €`r round(aggregate.crypto.spending.clustered$point.estimate, 1)` billion
+
+  - 90% confidence interval: €`r round(aggregate.crypto.spending.clustered$CI.90.percent[1], 1) to €`r round(aggregate.crypto.spending.clustered$CI.90.percent[2], 1) billion
+  - (Standard errors clustered by country)
+
+
+
+## EU SPACE summary
+
+- Some evidence that people who do not access traditional banking are more likely to use cryptocurrency as a means of payment
+
+- People who like cash for its speed and privacy are more likely to to use cryptocurrency as a means of payment
+
+- Donating to charitable causes is associated with cryptocurrency use
+
+
+# Overall adoption of cryptocurrency for payments
+
+## One-handed economist?
+
+:::::::::::::: {.columns}
+::: {.column width="30%"}
+
+\centering
+![](images/399px-Harry_S_Truman_-_NARA_-_530677_(2).jpg)
+<!-- https://en.wikipedia.org/wiki/File:Harry_S_Truman_-_NARA_-_530677_(2).jpg --> 
+
+
+:::
+::: {.column width="70%"}
+
+\begin{quote}
+  Give me a one-handed economist. All my economists say “on the one hand...”, then “but on the other...”
+\end{quote}
+
+\vskip5mm
+\hspace*\fill{\small--- USA President Harry Truman}
+
+:::
+::::::::::::::
+
+
+## Pessimistic picture for overall cryptocurrency adoption as means of payment
+
+- EU SPACE 2022: 1.3 percent of people used cryptocurrency as payment
+
+- USA SHED 2021 - 2023: Cryptocurrency usage as payment actually decreased
+
+  - 2021: `r crypto.used.as.payment_annual.trend["2021"]` percent
+  - 2022: `r crypto.used.as.payment_annual.trend["2022"]` percent
+  - 2023: `r crypto.used.as.payment_annual.trend["2023"]` percent
+
+# Overall adoption for payments: USA SDCPC 2015 - 2023 data
+
+## Another dataset
+
+- We will use the USA Survey and Diary of Consumer Payment Choice (SDCPC), also managed by the Federal Reserve
+
+- Compared to the SHED data:
+
+  - Smaller sample size (about 4,000 per year)
+  
+  - But it asks about cryptocurrency ownership for many years (2015 - 2023) and the main reason for ownership
+  
+  - SHED only asked why cryptocurrency was used as payment, not why it was owned at all
+
+## Survey questions
+
+- Do you own any cryptocurrency?
+
+- (If yes) Please tell us your primary reason for owning cryptocurrency.
+
+  - 1\) I use it to buy goods and services in the United States.
+  - 2\) I use it to make remittances or other international payments.
+  - 3\) It is an investment.
+  - 4\) It allows me to make payments anonymously.
+  - 5\) It uses secure blockchain technology to prevent loss and fraud.
+  - 6\) I am interested in new technologies.
+  - 7\) I do not trust banks.
+  - 8\) I do not trust the government or U.S. dollar.
+  - 9\) Other (specify)
+  
+- For data display, some categories are group together:
+  - \tiny Payments: 1, 2, 4
+  - \tiny Other: 5, 9
+  - \tiny Don't trust banks/government/USD: 7, 8
+
+## Percentage who own cryptocurrency
+
+```{r echo=FALSE}
+
+highlighted.series <- "Owns crypto"
+
+reason.owns.crypto$linewidth <- ifelse(reason.owns.crypto$reason == highlighted.series, 2.5, 1)
+reason.owns.crypto$linetype <- ifelse(reason.owns.crypto$reason == highlighted.series, "dashed", "solid")
+
+
+g <- ggplot(reason.owns.crypto, aes(x = year, y = share, group = reason,
+  color = reason, linewidth = linewidth, linetype = linetype)) +
+  geom_line(lineend = "round") +
+  scale_linewidth(range = c(1, 2.5)) +
+  # linewidth is _relative_, so must do this
+  # https://ggplot2.tidyverse.org/reference/scale_linewidth.html
+  xlab("") + ylab("Percentage") +
+  facet_grid(rows = vars(panel), scale = "free_y", space = "free_y") +
+  theme_dracula() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text = element_text(size = 18),
+    axis.title.y = element_text(size = 20, colour = "white"),
+    plot.title = element_text(size = 40),
+    plot.subtitle = element_text(size = 20),
+    legend.position = "top",
+    legend.text = element_text(size = 18), 
+    panel.border = element_rect(linewidth = 2, colour = "white", fill = NA),
+    strip.text.y = element_text(size = 18, colour = "white"),
+    legend.title = element_blank())  +
+  scale_colour_discrete(breaks = setdiff(reason.owns.crypto$reason, "Owns crypto")) +
+  guides(linewidth = "none", linetype = "none",
+    colour = guide_legend(override.aes = list(linewidth = 5)))
+
+gt = ggplot_gtable(ggplot_build(g))
+gt$heights[9] = 3*gt$heights[9]
+# gt$heights[11] = 3*gt$heights[11]
+# https://stackoverflow.com/questions/49110877/how-to-adjust-facet-size-manually
+grid.draw(gt)
+
+```
+
+
+## Primary reason for owning cryptocurrency is "Investment"
+
+```{r echo=FALSE}
+
+highlighted.series <- "Investment"
+
+reason.owns.crypto$linewidth <- ifelse(reason.owns.crypto$reason == highlighted.series, 2.5, 1)
+reason.owns.crypto$linetype <- ifelse(reason.owns.crypto$reason == highlighted.series, "dashed", "solid")
+
+
+g <- ggplot(reason.owns.crypto, aes(x = year, y = share, group = reason,
+  color = reason, linewidth = linewidth, linetype = linetype)) +
+  geom_line(lineend = "round") +
+  scale_linewidth(range = c(1, 2.5)) +
+  # linewidth is _relative_, so must do this
+  # https://ggplot2.tidyverse.org/reference/scale_linewidth.html
+  xlab("") + ylab("Percentage") +
+  facet_grid(rows = vars(panel), scale = "free_y", space = "free_y") +
+  theme_dracula() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text = element_text(size = 18),
+    axis.title.y = element_text(size = 20, colour = "white"),
+    plot.title = element_text(size = 40),
+    plot.subtitle = element_text(size = 20),
+    legend.position = "top",
+    legend.text = element_text(size = 18), 
+    panel.border = element_rect(linewidth = 2, colour = "white", fill = NA),
+    strip.text.y = element_text(size = 18, colour = "white"),
+    legend.title = element_blank())  +
+  scale_colour_discrete(breaks = setdiff(reason.owns.crypto$reason, "Owns crypto")) +
+  guides(linewidth = "none", linetype = "none",
+    colour = guide_legend(override.aes = list(linewidth = 5)))
+
+gt = ggplot_gtable(ggplot_build(g))
+gt$heights[9] = 3*gt$heights[9]
+# gt$heights[11] = 3*gt$heights[11]
+# https://stackoverflow.com/questions/49110877/how-to-adjust-facet-size-manually
+grid.draw(gt)
+
+```
+
+
+## Primary reason for owning cryptocurrency is "Payments"
+
+```{r echo=FALSE}
+
+highlighted.series <- "Payments"
+
+reason.owns.crypto$linewidth <- ifelse(reason.owns.crypto$reason == highlighted.series, 2.5, 1)
+reason.owns.crypto$linetype <- ifelse(reason.owns.crypto$reason == highlighted.series, "dashed", "solid")
+
+
+g <- ggplot(reason.owns.crypto, aes(x = year, y = share, group = reason,
+  color = reason, linewidth = linewidth, linetype = linetype)) +
+  geom_line(lineend = "round") +
+  scale_linewidth(range = c(1, 2.5)) +
+  # linewidth is _relative_, so must do this
+  # https://ggplot2.tidyverse.org/reference/scale_linewidth.html
+  xlab("") + ylab("Percentage") +
+  facet_grid(rows = vars(panel), scale = "free_y", space = "free_y") +
+  theme_dracula() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text = element_text(size = 18),
+    axis.title.y = element_text(size = 20, colour = "white"),
+    plot.title = element_text(size = 40),
+    plot.subtitle = element_text(size = 20),
+    legend.position = "top",
+    legend.text = element_text(size = 18), 
+    panel.border = element_rect(linewidth = 2, colour = "white", fill = NA),
+    strip.text.y = element_text(size = 18, colour = "white"),
+    legend.title = element_blank())  +
+  scale_colour_discrete(breaks = setdiff(reason.owns.crypto$reason, "Owns crypto")) +
+  guides(linewidth = "none", linetype = "none",
+    colour = guide_legend(override.aes = list(linewidth = 5)))
+
+gt = ggplot_gtable(ggplot_build(g))
+gt$heights[9] = 3*gt$heights[9]
+# gt$heights[11] = 3*gt$heights[11]
+# https://stackoverflow.com/questions/49110877/how-to-adjust-facet-size-manually
+grid.draw(gt)
+
+```
+
+
+## Primary reason is "Don't trust banks/government/USD"
+
+```{r echo=FALSE}
+
+highlighted.series <- "Don't trust banks/government/USD"
+
+reason.owns.crypto$linewidth <- ifelse(reason.owns.crypto$reason == highlighted.series, 2.5, 1)
+reason.owns.crypto$linetype <- ifelse(reason.owns.crypto$reason == highlighted.series, "dashed", "solid")
+
+
+g <- ggplot(reason.owns.crypto, aes(x = year, y = share, group = reason,
+  color = reason, linewidth = linewidth, linetype = linetype)) +
+  geom_line(lineend = "round") +
+  scale_linewidth(range = c(1, 2.5)) +
+  # linewidth is _relative_, so must do this
+  # https://ggplot2.tidyverse.org/reference/scale_linewidth.html
+  xlab("") + ylab("Percentage") +
+  facet_grid(rows = vars(panel), scale = "free_y", space = "free_y") +
+  theme_dracula() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+    axis.text = element_text(size = 18),
+    axis.title.y = element_text(size = 20, colour = "white"),
+    plot.title = element_text(size = 40),
+    plot.subtitle = element_text(size = 20),
+    legend.position = "top",
+    legend.text = element_text(size = 18), 
+    panel.border = element_rect(linewidth = 2, colour = "white", fill = NA),
+    strip.text.y = element_text(size = 18, colour = "white"),
+    legend.title = element_blank())  +
+  scale_colour_discrete(breaks = setdiff(reason.owns.crypto$reason, "Owns crypto")) +
+  guides(linewidth = "none", linetype = "none",
+    colour = guide_legend(override.aes = list(linewidth = 5)))
+
+gt = ggplot_gtable(ggplot_build(g))
+gt$heights[9] = 3*gt$heights[9]
+# gt$heights[11] = 3*gt$heights[11]
+# https://stackoverflow.com/questions/49110877/how-to-adjust-facet-size-manually
+grid.draw(gt)
+
+```
+
+
+
+
+
+
+# Conclusion
+
+## Conclusion
+
+- There is strong evidence in the USA and some evidence in the EU that people who are marginalized from mainstream financial services turn to cryptocurrency to serve their needs
+
+- Privacy is a priority for users of cryptocurrency
+
+- These themes fit with the Monero Project's mission to provide confidential, censorship-resistant, low-cost, peer-to-peer electronic cash for the world.
+
+- Population-wide adoption of cryptocurrency as a means of payment is low
+
+  - Using cryptocurrency as a means of payment may remain a niche activity for the foreseeable future.
+
+##
+
+
+\Huge  Questions and Comments?
+
+
+
+
