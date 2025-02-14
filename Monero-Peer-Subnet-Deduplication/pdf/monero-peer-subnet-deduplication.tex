@@ -90,9 +90,9 @@
 
 \begin{document}
 \title{Subnet Deduplication for Monero Node Peer Selection\\\vspace{.3cm}
-\large Draft v0.1\vspace{-.715cm}}
+\large Draft v0.2\vspace{-.715cm}}
 \author{Rucknium\orcidlink{0000-0001-5999-8950} }
-\date{February 12, 2025}
+\date{February 14, 2025}
 \maketitle
 \begin{abstract}
 Spying adversaries can set up nodes on the Monero network to try to
@@ -472,19 +472,19 @@ $p_{s,s}>p_{d,d}$ if and only if $w_{s}h_{s}<w_{d}h_{d}$. Rearranging,
 we have this condition:
 
 \begin{equation}
-\dfrac{w_{s}}{w_{d}}<\dfrac{h_{d}}{h_{s}}
+\dfrac{w_{d}}{w_{s}}>\dfrac{h_{s}}{h_{d}}
 \end{equation}
 
 This inequality says that subnet deduplication is a better strategy
 for the honest node if the price premium of leasing subnet-distinct
-IP addresses is less than the ratio of the number of distinct subnets
-with at least one honest node to the total number of honest nodes.
+IP addresses is more than the ratio of the total number of honest
+nodes to the number of distinct subnets with at least one honest node.
 Note that this condition does not depend on the adversary's budget.
 
-At any given moment, $h_{d}/h_{s}$ can be computed by performing
+At any given moment, $h_{s}/h_{d}$ can be computed by performing
 a network scan, assuming we can determine which nodes are honest.
 Using the network scan and list of suspected spy nodes from the previous
-section, we have $h_{d}/h_{s}=1.38$. That means that the subnet deduplication
+section, we have $h_{s}/h_{d}=1.38$. That means that the subnet deduplication
 algorithm is better than the status quo if the price premium to lease
 subnet-distinct IP addreses is 38 percent or greater. Of course, the
 subnet concentration of honest nodes can change over time.
