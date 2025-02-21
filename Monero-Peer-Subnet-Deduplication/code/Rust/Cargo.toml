@@ -1,0 +1,16 @@
+[package]
+name = "monero-network-crawler"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.40", features = ["macros", "rt-multi-thread"] }
+tower = { git = "https://github.com/Cuprate/tower.git", rev = "6c7faf0", default-features = false } # <https://github.com/tower-rs/tower/pull/796>
+tracing-subscriber =  "0.3.18"
+tracing = "0.1.40"
+dashmap = "6.1.0"
+
+cuprate-p2p-core = { git = "https://github.com/Cuprate/cuprate.git", branch = "expose-support-flags" }
+cuprate-wire = { git = "https://github.com/Cuprate/cuprate.git", branch = "expose-support-flags" }
+futures = "0.3.31"
+rand = "0.8"
