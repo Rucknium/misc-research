@@ -1,7 +1,5 @@
 
-\documentclass[usletter,11pt,english,openany]{article}
-
-
+\documentclass[english]{mrl}
 
 
 \usepackage{float}
@@ -12,7 +10,24 @@
 
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
-\usepackage[pdftex]{graphicx}
+
+
+\theoremstyle{plain}
+\newtheorem{prop}{\protect\propositionname}
+\ifx\proof\undefined\
+  \newenvironment{proof}[1][\proofname]{\par
+    \normalfont\topsep6\p@\@plus6\p@\relax
+    \trivlist
+    \itemindent\parindent
+    \item[\hskip\labelsep
+          \scshape
+      #1]\ignorespaces
+  }{%
+    \endtrivlist\@endpefalse
+  }
+  \providecommand{\proofname}{Proof}
+\fi
+
 
 
 
@@ -42,10 +57,14 @@
 
 \usepackage{lineno}
 \linenumbers
-\spacing{1.4}
+% \spacing{1.4}
+
+\usepackage{draftwatermark}
+\SetWatermarkText{DRAFT}
+\SetWatermarkScale{7}
+\SetWatermarkLightness{0.95}
 
 
-\usepackage[bookmarks=true]{hyperref}
 \hypersetup{colorlinks=false}
 \usepackage{orcidlink}
 \usepackage{booktabs}
@@ -61,8 +80,6 @@
 \usepackage{rotating}
 \usepackage{longtable}
 \usepackage{booktabs}
-
-
 
 % https://tex.stackexchange.com/questions/151241/remove-metadata-of-pdf-generated-by-latex
 \hypersetup{
@@ -88,29 +105,22 @@
 
 
 
-\begin{document}
 \title{Subnet Deduplication for Monero Node Peer Selection\\\vspace{.3cm}
-\large Draft v0.2\vspace{-.715cm}}
-\author{Rucknium\orcidlink{0000-0001-5999-8950} }
-\date{February 14, 2025}
-\maketitle
-\begin{abstract}
-Spying adversaries can set up nodes on the Monero network to try to
-guess the IP address origin of a Monero transaction. A larger number
-of spy nodes increases the accuracy of the guesses. Adversaries can
-take advantage of bulk pricing on leasing subnets, which are contiguous
-blocks of IP addresses. This research note analyzes the effectiveness
-of a subnet deduplication algorithm for peer node selection. The effectiveness
-of the proposed algorithm against a real spy node adversary is simulated.
-The share of an honest node's connections that are spy nodes is reduced
-to 2.5 percent, compared to 33.0 percent when using the status quo
-peer selection algorithm. Then a game is analyzed where an adversary
-is free to choose its IP address leasing strategy. The subnet deduplication
-algorithm is more effective against the agile spy adversary when the
-price premium of leasing subnet-distinct IP addresses is greater than
-the concentration of honest nodes in subnets. Given current network
-conditions, the price premium must be 38 percent or greater.
-\end{abstract}
+\large Draft v0.3}
+\authors{Rucknium\orcidlink{0000-0001-5999-8950}\footnote{\texttt{Rucknium@protonmail.com}}}
+\affiliations{Monero Research Lab}
+\date{\today}
+
+\type{RESEARCH BULLETIN}
+\ident{MRL-XXXX}
+
+\makeatother
+
+\providecommand{\propositionname}{Proposition}
+
+\begin{document}
+
+\begin{abstract} Spying adversaries can set up nodes on the Monero network to try to guess the IP address origin of a Monero transaction. A larger number of spy nodes increases the accuracy of the guesses. Adversaries can take advantage of bulk pricing on leasing subnets, which are contiguous blocks of IP addresses. This research note analyzes the effectiveness of a subnet deduplication algorithm for peer node selection. The effectiveness of the proposed algorithm against a real spy node adversary is simulated. The share of an honest node's connections that are spy nodes is reduced to 8.8 percent, compared to 30.8 percent when using the status quo peer selection algorithm. Then a game is analyzed where an adversary is free to choose its IP address leasing strategy. The subnet deduplication algorithm is more effective against the agile spy adversary than the status quo algorithm when the price premium of leasing subnet-distinct IP addresses is greater than the concentration of honest nodes in subnets. Given current network conditions, the price premium must be 4 percent or greater, which is probably satisfied in the real IP address leasing market. \end{abstract}
 
 \section{Statement of the problem}
 
@@ -153,6 +163,16 @@ to an outbound connection. Therefore, the effectiveness of Dandelion++
 depends on the honest nodes' probability of selecting spy nodes as
 outbound connections.
 
+Not all nodes accept connections initiated by other nodes. Many node
+operators do not or cannot open the Monero peer-to-peer port on the
+machines that host their Monero nodes, often due to being behind a
+network firewall or Network Address Translation (NAT). These nodes
+are called ``unreachable''. They will only have outbound connections
+and no inbound connections. A recent rigorous estimate of the share
+of unreachable nodes for the Monero network is not available, but
+estimates of the bitcoin network put the share of unreachable bitcoin
+nodes at 80 to 90 percent \cite{grundmann2021estimatingpeerdegreereachable,Franzoni2022b}.
+
 \begin{figure}
 \begin{centering}
 \caption{Dandelion++ stem phase illustration (courtesy of Vosto Emisio \protect\href{https://youtu.be/hM6TF3co7lI}{https://youtu.be/hM6TF3co7lI})}
@@ -181,29 +201,35 @@ are fixed, and the rest are allowed to vary. Another subnet that we
 will discuss is the \texttt{/16} subnet, which follows a pattern of
 \texttt{x.x.any.any}. Despite 16 being a smaller number than 24, a
 \texttt{/16} subnet is much larger than a \texttt{/24} subnet, constituting
-65,536 possible IP addresses instead of 256.
+65,536 possible IP addresses instead of 256. Two IP addresses in a
+subnet are not usable for hosting, so the total number of usable IP
+addresses in a \texttt{/16} and \texttt{/24} subnet are 65,534 and
+254, respectively.
 
 There are only about 4 billion possible IP addresses in the usual
 IPv4 format. IPv6 addresses, which allow about $3.4\times10^{38}$
 possible addresses, are disabled by default in the Monero node software
 exactly because it would be too easy for an adversary to set up thousands
 of IPv6 spy nodes cheaply.\footnote{See \href{https://libera.monerologs.net/monero/20230404\#c230903-c230904}{https://libera.monerologs.net/monero/20230404\#c230903-c230904}}
-Where there is scarcity and demand, there is a market and therefore
-a price. The limited IPv4 addresses are controlled by governments,
-telecommunications companies, universities, and similar entities.
-Some of these entities lease IP addresses on the open market. When
-leasing in bulk, IP addresses are usually grouped into subnets. Some
-brokers and lessors quote 118 to 250 USD per \texttt{/24} subnet per
-month, which works out to 0.46 to 0.98 USD per IP address per month.\footnote{See \href{https://www.ipxo.com/lease-ips/}{https://www.ipxo.com/lease-ips/},
+Where there is scarcity, demand, and enforced private property rules,
+there is a market and therefore a price. The limited IPv4 addresses
+are controlled by governments, telecommunications companies, universities,
+and similar entities. Some of these entities lease IP addresses on
+the open market. When leasing in bulk, IP addresses are usually grouped
+into subnets. Some brokers and lessors quote 118 to 250 USD per \texttt{/24}
+subnet per month, which works out to 0.46 to 0.98 USD per IP address
+per month.\footnote{See \href{https://www.ipxo.com/lease-ips/}{https://www.ipxo.com/lease-ips/},
 , \href{https://www.logicweb.com/bulk-ip-address-leasing/}{https://www.logicweb.com/bulk-ip-address-leasing/},
 and \href{https://www.forked.net/ip-address-leasing/}{https://www.forked.net/ip-address-leasing/}}
 
-Evidence uncovered by Monero developer boog900 suggests that a spy
-node network is currently operating on the Monero network.\footnote{\href{https://github.com/monero-project/research-lab/issues/126}{https://github.com/monero-project/research-lab/issues/126}}
-The spy node operator is leasing a combination of whole \texttt{/24}
-subnets and individual IP addresses. As a temporary measure, the Monero
-Research Lab has recommended that honest Monero node operators prevent
-connections to the suspected spy node IP addresses by enabling a -{}\texttt{-ban-list}
+Evidence suggests that a spy node network is currently operating on
+the Monero network.\footnote{\href{https://github.com/monero-project/research-lab/issues/126}{https://github.com/monero-project/research-lab/issues/126}}
+Box \ref{sec:box-spy-node-detection-methodology} explains the method
+used to distinguish suspected spy nodes from honest nodes. The spy
+node operator is leasing a combination of whole \texttt{/24} subnets
+and individual IP addresses. As a temporary measure, the Monero Research
+Lab has recommended that honest Monero node operators prevent connections
+to the suspected spy node IP addresses by enabling a -{}\texttt{-ban-list}
 option on their nodes.\footnote{See \href{https://github.com/monero-project/meta/issues/1124}{https://github.com/monero-project/meta/issues/1124}}
 Enabling a ban list:
 \begin{enumerate}
@@ -223,6 +249,13 @@ is more effective than the status quo peer selection algorithm when
 an adversary has free choice of whether to lease subnets or subnet-distinct
 IP addresses.
 
+\noindent{\fboxrule 2pt\fbox{\begin{minipage}[t]{1\columnwidth - 2\fboxsep - 2\fboxrule}%
+
+\subsection{Box: Spy node detection methodology\label{sec:box-spy-node-detection-methodology}}
+
+TODO%
+\end{minipage}}}
+
 \section{Simulated effect of subnet deduplication on current spy node effectiveness}
 
 Monero's status quo peer selection algorithm does have one existing
@@ -234,32 +267,33 @@ When an adversary leases many\texttt{ /24} subnets that are in distinct
 that the Tor protocol requires that no two nodes in its three-node
 circuit can be in the same \texttt{/16} subnet \cite{Rochet2020}.
 
-The proposed subnet deduplication peer selection algorithm keeps the
-original rule about not selecting a peer that is in a \texttt{/16}
-subnet that Alice is already connected to. In addition, it eliminates
-from the peer candidate list all but one IP address in each \texttt{/16}
-subnet. This form of the subnet deduplication algorithm is the most
-aggressive. Less aggressive forms could deduplicate at a smaller subnet
-level or keep more than one IP address in each subnet after deduplication.
+The proposed subnet deduplication peer selection algorithm modifies
+the original rule about not selecting a peer that is in a \texttt{/16}
+subnet that Alice is already connected to, setting the subnet level
+to \texttt{/24} instead of \texttt{/16}. In addition, each time a
+node draws an IP address from its peer list to establish a new outbound
+connection, it eliminates from the peer candidate list all but one
+IP address in each \texttt{/24} subnet.
 
 To compare the effectiveness of spy nodes against the status quo algorithm
 and the subnet deduplication algorithm, we must collect a list of
-spy nodes, honest nodes, and their subnets. A list of IP addresses
-accepting inbound connections for the Monero protocol can be obtained
-easily by a Monero network scan.\footnote{\href{https://gist.github.com/Boog900/5e9fe91197fbbf5f5214df77de0c8cd8}{https://gist.github.com/Boog900/5e9fe91197fbbf5f5214df77de0c8cd8}}
+spy nodes, reachable honest nodes, and their subnets. A list of IP
+addresses accepting inbound connections for the Monero protocol can
+be obtained easily by a Monero network scan.\footnote{\href{https://github.com/Rucknium/misc-research/tree/main/Monero-Peer-Subnet-Deduplication/code/Rust}{https://github.com/Rucknium/misc-research/tree/main/Monero-Peer-Subnet-Deduplication/code/Rust}}
 First, the scanner contacts the Monero seed nodes to get an initial
 list of nodes on the network. Then the scanner contacts all the nodes
 on the initial list, requesting their own lists of nodes' IP addresses.
-The scanner iterates through the accumulated list until all contactable
+The scanner iterates through the accumulated list until all reachable
 nodes have been contacted. These nodes can be classified into their
-subnets and cross-referenced against the list of suspected spy nodes.
+subnets and cross-referenced against the list of suspected spy node
+IP addresses.
 
 Figure \ref{fig-pre-dedup-treemap} plots a treemap of honest nodes
 and spy nodes that accept inbound connections, based on a network
-scan performed on February 11, 2025. Each of the 4,433 small colored
-rectangles represents one node's IP address. Nodes in the same \texttt{/16}
-subnet are grouped inside black-lined perimeters and are labeled with
-white text where possible. Nodes in the same /24 subnet are grouped
+scan performed on May 25, 2025. Each of the 4,607 small colored rectangles
+represents one node's IP address. Nodes in the same \texttt{/16} subnet
+are grouped inside black-lined perimeters and are labeled with white
+text where possible. Nodes in the same \texttt{/24} subnet are grouped
 inside yellow-lined perimeters. The share of the plot area that is
 red is approximately the share of spy nodes on the network. Along
 the left side and bottom of the plot, we observe six \texttt{/24}
@@ -281,19 +315,19 @@ subnet.
 \end{figure}
 
 Figure \ref{fig-post-dedup-treemap} shows a treemap of honest nodes
-and spy nodes after deduplication of \texttt{/16} subnets. When a
-\texttt{/16} subnet contains both honest nodes and spy nodes, the
+and spy nodes after deduplication of \texttt{/24} subnets. When a
+\texttt{/24} subnet contains both honest nodes and spy nodes, the
 rectangle's color is a mixture of blue and red proportional to the
 share of honest and spy nodes in the subnet. Compared to Figure \ref{fig-pre-dedup-treemap},
 the area occupied by the red spy nodes is much smaller after subnet
 deduplication.
 
 \begin{figure}[H]
-\caption{Subnet treemap of Honest and spy nodes after /16 subnet deduplication}
+\caption{Subnet treemap of Honest and spy nodes after /24 subnet deduplication}
 
 \label{fig-post-dedup-treemap}
 
-\includegraphics[scale=0.5]{images/treemap-16-subnet-deduplication}
+\includegraphics[scale=0.5]{images/treemap-24-subnet-deduplication}
 \end{figure}
 
 If each node chose a single peer node, then the share of connections
@@ -303,27 +337,69 @@ of nodes by the number of spy nodes. However, by default nodes choose
 elements are drawn without replacement with unequal probability are
 known to be much more complicated than in problems where elements
 are drawn with replacement with unequal probability \cite{TILLE2023100533}.
-The computation is further complicated by the the status quo rule
-to not select a peer in a \texttt{/16} subnet when already connected
-to a peer in that \texttt{/16} subnet.
+The computation is further complicated by the status quo rule to not
+select a peer in a \texttt{/16} subnet when already connected to a
+peer in that \texttt{/16} subnet.
 
-I wrote a Monte Carlo simulation that imitates the status quo and
-subnet deduplication peer selection algorithms, using the data from
-the network scan as its basis. First, the 12 outbound peer slots are
-filled sequentially using the respective peer selection algorithm.
-Then, peer ``churn'' is simulated 100 times. A churn occurs when
+We simulated the creation of Monero node networks to evaluate the
+effect of changing Monero's peer selection algorithm, using the data
+from the network scan as its basis. First, the 12 outbound peer slots
+are filled sequentially using the respective peer selection algorithm.
+Then, peer ``churn'' is simulated 12 times. A churn occurs when
 one peer is randomly dropped and a new one chosen, using the peer
-selection rules. This simulation is done 10,000 times to estimate
-the real share of a typical nodes's outbound peer connections that
-would be composed of spy nodes. Note that the Monte Carlo simulation
-ignores the fact that nodes' \texttt{white\_list} and \texttt{gray\_list}
-are limited to 1,000 and 5,000 IP addresses, respectively. See \cite{Cao2020}
-for more details about Monero's graylist housekeeping.
+selection rules. Note that the Monte Carlo simulation ignores the
+fact that nodes' \texttt{white\_list} and \texttt{gray\_list} are
+limited to 1,000 and 5,000 IP addresses, respectively. See \cite{Cao2020}
+for more details about Monero's graylist housekeeping. Each honest
+node on the network, including unreachable nodes, performs this peer-selection
+procedure. Suspected spy nodes in the simulation do not establish
+outbound connections because their real-world counterparts appear
+to not establish them, either. The share of unreachable nodes on the
+network was set to 80 and 90 percent in different scenarios.
 
-The results of the Monte Carlo simulation are as follows. When the
-status quo peer selection algorithm is used, the share of connections
-to spy nodes is 33.0 percent. When the subnet deduplication peer selection
-algorithm is used, the share of connections to spy nodes is 2.5 percent. 
+\input{tables/malicious-connection-summary.tex}
+
+\input{tables/inbound-summary.tex}
+
+\input{tables/network-stats.tex}
+
+Table \ref{table-malicious-connection-summary} shows summary statistics
+of the number of outbound connections from each honest node to suspected
+spy nodes. When the status quo algorithm is used, 3.7 connections
+(30.8 percent) of connections are to suspected spy nodes, on average.
+When the subnet deduplication algorithm is used, 1.06 connections
+(8.8 percent) of connections are to suspected spy nodes, on average.
+
+The simulated networks can also measure the likely effect of the subnet
+deduplication algorithm on the number of inbound connections of reachable
+honest nodes. Subnet deduplication reduces the number of connections
+to suspected spy nodes. Each honest node still needs 12 outbound connections,
+so those connections that would have been established to spy nodes
+must now be established to reachable honest nodes, increasing the
+load on those nodes. This potential downside of non-uniform peer selection
+was modeling in the Bitcoin network by \cite{virtu2023}. Reports
+of excessive computer resource consumption by nodes during the March
+2024 suspected black marble transaction flooding suggests that a large
+number of connections can become a burden for nodes.\footnote{\href{https://github.com/monero-project/monero/issues/9317}{https://github.com/monero-project/monero/issues/9317}}
+
+Table \ref{table-inbound-summary} shows summary statistics of the
+number of inbound connections to reachable honest nodes. Figure \ref{fig-histogram-inbound}
+shows the corresponding histograms. When 80 percent of nodes are unreachable,
+the median number of inbound connections rises modestly when subnet
+deduplication is used, from 63 to 86. When 90 percent of nodes are
+unreachable, the median number of inbound connections rises from 132
+to 182.
+
+Table \ref{table-network-stats} shows centrality statistics of the
+simulated networks.
+
+\begin{figure}
+
+\caption{Histograms of inbound connections of honest reachable nodes}
+\label{fig-histogram-inbound}
+\centering{}\includegraphics[scale=0.5]{images/inbound-histogram}
+\end{figure}
+
 
 \section{Protocol-adversary interaction as a game}
 
@@ -334,10 +410,12 @@ adversary's current behavior. If the Monero protocol switches to subnet
 deduplication, could privacy actually worsen? Can the cure be worse
 than the disease? We will set up a simple game theory model and compute
 under what conditions it is better to use the subnet deduplication
-peer selection strategy. The theoretical result of this section is
-that the choice of the honest node's strategy depends on the price
-difference between bulk and individual IP address leasing, compared
-to the concentration of honest nodes within subnets.
+peer selection strategy. If honest nodes are strongly concentrated
+in a few subnets, spy nodes could potentially gain an advantage by
+spreading out among many distinct subnets. The theoretical result
+of this section is that the choice of the honest node's strategy depends
+on the price difference between bulk and individual IP address leasing,
+compared to the concentration of honest nodes within subnets.
 
 We make the following assumptions:
 \begin{enumerate}
@@ -353,8 +431,8 @@ if the adversary exhausts low-cost IP address providers when leasing
 a large number of IP addresses, and then must resort to high-cost
 IP address providers.
 \item The adversary is assumed to either lease only subnets or only subnet-distinct
-IP addresses, i.e. no hybrid strategies. This assumption could be
-relaxed in further work.
+IP addresses, i.e. no mixed strategies. The next section will relax
+this assumption and compute a mixed-strategy Nash equilibrium.
 \end{enumerate}
 There are two players, an honest node and a spying adversary. They
 each can play two possible strategies. The honest node can use the
@@ -368,19 +446,16 @@ of that probability.
 
 Define these probabilities that an honest node selects a spy node
 peer:
-
-$p_{s,s}$ when the honest node uses the status quo peer selection
+\begin{itemize}
+\item $p_{s,s}$ when the honest node uses the status quo peer selection
 algorithm and the adversary leases whole subnets,
-
-$p_{d,s}$ when the honest node uses the subnet deduplication peer
+\item $p_{d,s}$ when the honest node uses the subnet deduplication peer
 selection algorithm and the adversary leases whole subnets,
-
-$p_{s,d}$ when the honest node uses the status quo peer selection
+\item $p_{s,d}$ when the honest node uses the status quo peer selection
 algorithm and the adversary leases subnet-distinct IP addresses, and
-
-$p_{d,d}$ when the honest node uses the subnet deduplication peer
+\item $p_{d,d}$ when the honest node uses the subnet deduplication peer
 selection algorithm and the adversary leases subnet-distinct IP addresses.
-
+\end{itemize}
 Table \ref{table-normal-form-game} shows the normal-form game. The
 left side of each cell is the honest node's payoff. The right side
 is the adversary's payoff.
@@ -407,20 +482,21 @@ is the adversary's payoff.
 
 We want to know under what conditions will the honest node have more
 privacy with a subnet deduplication peer selection algorithm instead
-of the status quo peer selection algorithm. We assume that the adversary
-uses the ``lease whole subnets'' strategy when the honest node uses
-the status quo algorithm and the adversary uses the ``lease subnet-distinct
-IP addresses'' strategy when the honest node uses the subnet deduplication
-algorithm. Therefore, we want to know under what conditions $p_{s,s}>p_{d,d}$.
+of the status quo peer selection algorithm. In this section, we assume
+that the adversary uses the ``lease whole subnets'' strategy when
+the honest node uses the status quo algorithm and the adversary uses
+the ``lease subnet-distinct IP addresses'' strategy when the honest
+node uses the subnet deduplication algorithm. Therefore, we want to
+know under what conditions this inequality will be true: $p_{s,s}>p_{d,d}$.
 
 Let
 
 $h_{s}$ be the total number of honest nodes that accept inbound connections,
-including nodes in the same subnet,
+including nodes in the same subnet as other nodes,
 
 $b$ be the budget of adversary,
 
-$a$ be number of IP addresses leased by adversary, and
+$a$ be number of IP addresses leased by the adversary, and
 
 $w_{s}$ be the price per IP address when leasing whole subnets. (If
 the price to lease a subnet is 150 USD, then the price per IP address
@@ -461,6 +537,11 @@ node and
 
 $w_{d}$ be the price to lease one subnet-distinct IP address.
 
+We assume that the adversary does not rent IP addresses in the same
+subnet as any honest nodes. It would not be efficient for them to
+do so because it would needlessly reduce the probability that their
+spy node is chosen by the subnet deduplication algorithm.
+
 By a similar logic as in the $p_{s,s}$ case,
 
 \begin{equation}
@@ -484,14 +565,209 @@ Note that this condition does not depend on the adversary's budget.
 At any given moment, $h_{s}/h_{d}$ can be computed by performing
 a network scan, assuming we can determine which nodes are honest.
 Using the network scan and list of suspected spy nodes from the previous
-section, we have $h_{s}/h_{d}=1.38$. That means that the subnet deduplication
+section, we have $h_{s}/h_{d}=1.04$. That means that the subnet deduplication
 algorithm is better than the status quo if the price premium to lease
-subnet-distinct IP addreses is 38 percent or greater. Of course, the
+subnet-distinct IP addresses is 4 percent or greater. Of course, the
 subnet concentration of honest nodes can change over time.
+
+\subsection{Nash equilibrium}
+
+For completeness, we will compute the Nash equilibrium of the game,
+based on Theorem 1.2 of \cite{sun:hal-03852615}. We need expressions
+for $p_{s,s}$, $p_{d,d}$, $p_{d,s}$ and $p_{s,d}$ The expressions
+for $p_{s,s}$ and $p_{d,d}$ are already defined in equations \ref{eq:pss}
+and \ref{eq:pdd}.
+
+$p_{d,s}$ is the probability that an honest node selects an adversary's
+IP address when the honest node uses the subnet deduplication peer
+selection algorithm and the adversary leases whole subnets. Given
+that there are 254 usable IP addresses in a \texttt{/24} subnet, the
+effective number of spy nodes in this environment would be divided
+by 254. With $a$ as the number of IP addresses leased by the adversary
+and $h_{d}$ being the number of distinct subnets with at least one
+honest node, we have: 
+
+$p_{d,s}=\dfrac{a/254}{h_{d}+a/254}$ 
+
+Simplifying the expression and assuming that $a=b/w_{s}$, i.e. the
+adversary exhausts its budget $b$ at the $w_{s}$ price per IP address,
+produces:
+
+\begin{equation}
+p_{d,s}=\dfrac{b}{254w_{s}h_{d}+b}\label{eq:pds}
+\end{equation}
+
+Next, $p_{s,d}$ is the probability that an honest node selects an
+adversary's IP address when the honest node uses the status quo peer
+selection algorithm and the adversary leases subnet-distinct IP addresses.
+With $a$ as the number of IP addresses leased by the adversary and
+$h_{s}$ being the total number of honest nodes that accept inbound
+connections, including nodes in the same subnet, we have: 
+
+$p_{s,d}=\dfrac{a}{h_{s}+a}$ 
+
+Simplifying the expression and assuming that $a=b/w_{d}$, i.e. the
+adversary exhausts its budget $b$ at the $w_{d}$ price per IP address,
+produces:
+
+\begin{equation}
+p_{s,d}=\dfrac{b}{w_{d}h_{s}+b}\label{eq:psd}
+\end{equation}
+
+The following proposition will make the assumption that $w_{s}<w_{d}<254w_{s}$
+and $h_{d}<h_{s}<254h_{d}$. The $w_{s}<w_{d}$ inequality is reasonable
+because the price per IP when leasing whole subnets should be less
+than the price per IP when leasing subnet-distinct IP addresses, due
+to bulk pricing. The $w_{d}<254w_{s}$ inequality is reasonable because
+a whole subnet should not cost more than a single IP address. The
+$h_{d}<h_{s}$inequality is reasonable because it will hold if at
+least two honest nodes share the same subnet, which is true in the
+empirical data. The $h_{s}<254h_{d}$ inequality is reasonable because
+it will hold if honest nodes do not completely saturate their subnets.
+\begin{prop}
+\label{prop:1}Assume $w_{s}<w_{d}<254w_{s}$ and $h_{d}<h_{s}<254h_{d}$.
+Then the game has a unique Nash equilibrium. Both the protocol and
+the adversary adopt mixed strategies. The protocol uses the ``status
+quo'' strategy with probability
+\begin{equation}
+P_{protocol}^{*}(status\,quo)=\dfrac{p_{d,d}-p_{d,s}}{p_{s,s}-p_{s,d}-p_{d,s}+p_{d,d}}\label{eq:P_protocol_status_quo}
+\end{equation}
+
+and the ``subnet deduplication'' strategy with its probability complement:
+
+\begin{equation}
+P_{protocol}^{*}(subnet\,deduplication)=1-P_{protocol}^{*}(status\,quo).
+\end{equation}
+
+The adversary uses the ``lease whole subnets'' strategy with probability
+
+\begin{equation}
+P_{adversary}^{*}(whole\,subnets)=\dfrac{p_{d,d}-p_{s,d}}{p_{s,s}-p_{s,d}-p_{d,s}+p_{d,d}}\label{eq:P_adversary_whole_subnets}
+\end{equation}
+
+and the ``lease subnet-distinct IP addresses'' strategy with its
+probability complement:
+
+\begin{equation}
+P_{adversary}^{*}(subnet\textrm{-}distinct)=1-P_{adversary}^{*}(whole\,subnets).
+\end{equation}
+
+The protocol's payoff in this equilibrium is
+
+\begin{equation}
+u_{protocol}\left(P_{protocol}^{*},P_{adversary}^{*}\right)=-\dfrac{p_{s,s}p_{d,d}-p_{s,d}p_{d,s}}{p_{s,s}-p_{s,d}-p_{d,s}+p_{d,d}}
+\end{equation}
+
+and the adversary's payoff is
+
+\begin{equation}
+u_{adversary}\left(P_{protocol}^{*},P_{adversary}^{*}\right)=\dfrac{p_{s,s}p_{d,d}-p_{s,d}p_{d,s}}{p_{s,s}-p_{s,d}-p_{d,s}+p_{d,d}}.\label{eq:u_adversary}
+\end{equation}
+\end{prop}
+The proof of Proposition \ref{prop:1} is in Appendix \ref{sec:appendix}.
+
+Assume that $w_{d}$, the cost per month of renting a subnet-distinct
+IP address, is 1 USD. Assume that $w_{s}$, the cost per month per
+IP address, of renting a whole /24 subnet, is 0.59 USD. The empirical
+adversary's budget per month can be estimated by tabulating its number
+of rented subnets and subnet-distinct IP addresses and multiplying
+them by the assumed prices. The estimated budget $b$ would be 1,313
+USD per month. The May 2025 network scan suggests that $h_{s}$, the
+total number of honest reachable nodes, is 2,764. The number of /24
+subnets with honest reachable nodes, $h_{d}$, is 2,647.
+
+Plugging these assumed and estimated values into equations (\ref{eq:P_protocol_status_quo})
+and (\ref{eq:P_adversary_whole_subnets}) produces the following unique
+mixed-strategy Nash equilibrium. The protocol uses the status quo
+peer selection algorithm with 72.6 percent probability. With 27.4
+percent probability, the protocol uses subnet deduplication. The adversary
+leases whole subnets with 2.1 percent probability. With 97.9 percent
+probability, the adversary leases subnet-distinct IP addresses. Using
+equation (\ref{eq:u_adversary}), the probability that an honest node's
+connection is established to an adversary is 32.5 percent in this
+Nash equilibrium. These computations were also independently verified
+in the open source Gambit game theory solver \cite{Gambit2025}. TODO:
+Interpretation of the Nash equilbrium.
 
 \begin{singlespace}
 \bibliographystyle{apalike-ejor}
 \addcontentsline{toc}{section}{\refname}\bibliography{references}
+
 \end{singlespace}
+
+\appendix
+
+\section{Appendix\label{sec:appendix}}
+
+Proof of Proposition \ref{prop:1}.
+\begin{proof}
+Assume $w_{s}<w_{d}<254w_{s}$ and $h_{d}<h_{s}<254h_{d}$. Given
+that the game is a two-player two-action zero sum game in normal form,
+we need to satisfy conditions 17 and 18 of Theorem 1.2 of \cite{sun:hal-03852615},
+which are $\left(p_{s,s}-p_{s,d}\right)\left(p_{d,d}-p_{d,s}\right)>0$
+and $\left(p_{s,s}-p_{d,s}\right)\left(p_{d,d}-p_{s,d}\right)>0$.
+We will show that each expression in each parentheses is positive,
+so both inequalities hold and the conditions are satisfied.
+
+$\left(p_{s,s}-p_{s,d}\right)=\dfrac{b}{w_{s}h_{s}+b}-\dfrac{b}{w_{d}h_{s}+b}$
+, which will be positive when $w_{s}<w_{d}$, as we have assumed.
+
+Next,
+
+$\left(p_{d,d}-p_{d,s}\right)=\dfrac{b}{w_{d}h_{d}+b}-\dfrac{b}{254w_{s}h_{d}+b}$,
+which will be positive when $w_{d}<254w_{s}$, as we have assumed.
+
+Next,
+
+$\left(p_{s,s}-p_{d,s}\right)=\dfrac{b}{w_{s}h_{s}+b}-\dfrac{b}{254w_{s}h_{d}+b}$,
+which will be positive when $h_{s}<254h_{d}$, as we have assumed.
+
+Finally,
+
+$\left(p_{d,d}-p_{s,d}\right)=\dfrac{b}{w_{d}h_{d}+b}-\dfrac{b}{w_{d}h_{s}+b}$,
+which will be positive if $h_{d}<h_{s}$, as we have assumed.
+
+Using equations 19 and 20 of Theorem 1.2 of \cite{sun:hal-03852615},
+the unique Nash equilibrium of the game is a set of mixed strategies:
+
+The protocol uses the ``status quo'' strategy with probability
+\begin{equation}
+P_{protocol}^{*}(status\,quo)=\dfrac{p_{d,d}-p_{d,s}}{p_{s,s}-p_{s,d}-p_{d,s}+p_{d,d}}
+\end{equation}
+
+and the ``subnet deduplication'' strategy with its probability complement:
+
+\begin{equation}
+P_{protocol}^{*}(subnet\,deduplication)=1-P_{protocol}^{*}(status\,quo).
+\end{equation}
+
+The adversary uses the ``lease whole subnets'' strategy with probability
+
+\begin{equation}
+P_{adversary}^{*}(whole\,subnets)=\dfrac{p_{d,d}-p_{s,d}}{p_{s,s}-p_{s,d}-p_{d,s}+p_{d,d}}
+\end{equation}
+
+and the ``lease subnet-distinct IP addresses'' strategy with its
+probability complement:
+
+\begin{equation}
+P_{adversary}^{*}(subnet\textrm{-}distinct)=1-P_{adversary}^{*}(whole\,subnets).
+\end{equation}
+
+Equation 21 of Theorem 1.2 of \cite{sun:hal-03852615}can be applied
+to compute each player's payoff in the game at the Nash equilibrium.
+Recall that the protocol's payoff is negative in all cases. The protocol's
+payoff in this equilibrium is
+
+\begin{equation}
+u_{protocol}\left(P_{protocol}^{*},P_{adversary}^{*}\right)=-\dfrac{p_{s,s}p_{d,d}-p_{s,d}p_{d,s}}{p_{s,s}-p_{s,d}-p_{d,s}+p_{d,d}}
+\end{equation}
+
+and the adversary's payoff is
+
+\begin{equation}
+u_{adversary}\left(P_{protocol}^{*},P_{adversary}^{*}\right)=\dfrac{p_{s,s}p_{d,d}-p_{s,d}p_{d,s}}{p_{s,s}-p_{s,d}-p_{d,s}+p_{d,d}}.
+\end{equation}
+\end{proof}
 
 \end{document}

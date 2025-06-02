@@ -1,66 +1,46 @@
 
-# install.packages(c("data.table", "ggplot2", "treemapify", "future", "future.apply"))
+# Install packages:
+# install.packages(c("data.table", "ggplot2", "treemapify", "future", "future.apply", "gt", "remotes"))
+# remotes::install_github("Rucknium/xmrpeers", upgrade = FALSE)
 
 library(data.table)
+library(ggplot2)
+library(treemapify)
+library(gt)
+library(xmrpeers)
 
 
-unique.outbound.ips <- readLines("good_peers.txt")
-# Run this for an hour to get good_peers:
-# https://gist.github.com/Boog900/5e9fe91197fbbf5f5214df77de0c8cd8
+data(good_peers)
 
-unique.outbound.ips <- stringr::str_extract(unique.outbound.ips, "[0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}")
-unique.outbound.ips <- unique(unique.outbound.ips)
+good_peers <- stringr::str_extract(good_peers,
+  "[0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}")
+good_peers <- unique(good_peers)
+good_peers <- na.omit(good_peers)
+# Clean IP addresses
 
-# wget https://github.com/Boog900/monero-ban-list/raw/refs/heads/main/ban_list.txt
-ban_list <- readLines("ban_list.txt")
+data(ban_list)
+suspected.malicious.ips <- ban_list
 
-
-convert.subnet.16 <- function(x) {
-  gsub("[.][0-9]{1,3}[.][0-9]{1,3}$", "", x)
-}
-
-
-convert.subnet.24 <- function(x) {
-  gsub("[.][0-9]{1,3}$", "", x)
-}
 
 
 unique.outbound.ips <- data.table(
-  ip = unique.outbound.ips,
-  subnet.16 = convert.subnet.16(unique.outbound.ips),
-  subnet.24 = convert.subnet.24(unique.outbound.ips))
+  ip = good_peers,
+  subnet.16 = as.subnet(good_peers, 16),
+  subnet.24 = as.subnet(good_peers, 24))
 
 nrow(unique.outbound.ips)
 uniqueN(unique.outbound.ips$subnet.16)
 uniqueN(unique.outbound.ips$subnet.24)
 
-ban_list.singletons <- ban_list[! grepl("/", ban_list)]
-ban_list.ranges <- ban_list[grepl("/", ban_list)]
 
-uniqueN(convert.subnet.16(ban_list.singletons))
-
-malicious.ips <- unique.outbound.ips[ip %in% ban_list.singletons, ip]
-
-for (i in ban_list.ranges) {
-  for (j in seq_along(unique.outbound.ips$ip)) {
-    if ( ! is.na(IP::ip.match(IP::ipv4(unique.outbound.ips$ip[j]), IP::ipv4r( i )))) {
-      malicious.ips <- c(malicious.ips, unique.outbound.ips$ip[j])
-    }
-  }
-}
-
-h_d <- unique.outbound.ips[ ! ip %in% malicious.ips, uniqueN(ip)]
-h_s <- unique.outbound.ips[ ! ip %in% malicious.ips, uniqueN(subnet.16)]
-h_d / h_s
-# Condition for p_ss > p_dd
+suspected.malicious.ips.exact <- good_peers[xmrpeers::in.ip.set(good_peers, suspected.malicious.ips)]
 
 
 
-unique.outbound.ips[, type := ifelse(ip %in% malicious.ips, "spy", "honest")]
+
+unique.outbound.ips[, type := ifelse(ip %in% suspected.malicious.ips.exact, "spy", "honest")]
 unique.outbound.ips[, y := 1]
 
-library(ggplot2)
-library(treemapify)
 
 
 png("pdf/images/treemap-status-quo.png", width = 1000, height = 1000)
@@ -100,7 +80,41 @@ setorder(unique.outbound.ips.deduplicated, spy.share)
 png("pdf/images/treemap-16-subnet-deduplication.png", width = 1000, height = 1000)
 
 ggplot(unique.outbound.ips.deduplicated, aes(area = y, fill = spy.share)) +
-  labs(title = "Subnet treemap of honest and spy nodes after /16 subnet deduplication") +
+  labs(title = "Subnet treemap of honest and spy nodes after /24 subnet deduplication") +
+  geom_treemap(start = "topright") + # layout = "fixed"
+  # start: The corner in which to start placing the tiles. One of
+  # 'bottomleft' (the default), 'topleft', 'topright' or 'bottomright'.
+  scale_fill_gradient2(name = "Spy share:    ", midpoint = 0.5,
+    low = scales::muted("blue", l = 40), high = scales::muted("red", l = 60)) +
+  # guides(fill = guide_legend(title = "Spy share")) +
+  guides(fill = guide_colorbar(barwidth = 20)) +
+  theme(plot.title = element_text(size = 25),
+    legend.title = element_text(size = 18),
+    legend.text = element_text(size = 18),
+    legend.position = "top")
+
+dev.off()
+
+
+
+
+unique.outbound.ips.deduplicated <- unique.outbound.ips[,
+  .(spy.share = mean(type == "spy")), by = "subnet.24"]
+
+unique.outbound.ips.deduplicated[, type := "mixed"]
+unique.outbound.ips.deduplicated[spy.share == 1, type := "spy"]
+unique.outbound.ips.deduplicated[spy.share == 0, type := "honest"]
+
+unique.outbound.ips.deduplicated[, y := 1]
+setorder(unique.outbound.ips.deduplicated, type)
+setorder(unique.outbound.ips.deduplicated, spy.share)
+
+
+
+png("pdf/images/treemap-24-subnet-deduplication.png", width = 1000, height = 1000)
+
+ggplot(unique.outbound.ips.deduplicated, aes(area = y, fill = spy.share)) +
+  labs(title = "Subnet treemap of honest and spy nodes after /24 subnet deduplication") +
   geom_treemap(start = "topright") + # layout = "fixed"
   # start: The corner in which to start placing the tiles. One of
   # 'bottomleft' (the default), 'topleft', 'topright' or 'bottomright'.
@@ -119,73 +133,188 @@ dev.off()
 
 
 
-threads <- 4
-future::plan(future::multicore, workers = threads)
-# Change to future::multisession if on Windows or in RStudio
 
 
-n.default.out <- 12
-n.nodes <- 10000
+data(good_peers)
+
+good_peers <- stringr::str_extract(good_peers,
+  "[0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}[.][0-9]{1,3}")
+good_peers <- unique(good_peers)
+good_peers <- na.omit(good_peers)
+# Clean IP addresses
+
+data(ban_list)
+suspected.malicious.ips <- ban_list
+
+future::plan(future::multisession,
+  workers = max(c(1, floor(parallelly::availableCores()/6))))
+# Multi-threaded is recommended
 
 
-choose.peers <- function(unique.outbound.ips, connections, n.default.out, method) {
+scenarios <- data.table(name = c(
+  "status_quo_80_percent_unreachable",
+  "deduplication_80_percent_unreachable",
+  "status_quo_90_percent_unreachable",
+  "deduplication_90_percent_unreachable"
+),
+  deduplication = c(FALSE, TRUE, FALSE, TRUE),
+  share.reachable = c(0.20, 0.20, 0.10, 0.10)
+)
 
-  while(length(connections) < n.default.out) {
+simulated.networks <- list()
 
-    if (method == "status quo") {
-      candidates <- unique.outbound.ips[! subnet.16 %in% convert.subnet.16(connections), ip]
-    }
-    if (method == "subnet deduplication") {
-      candidates <- unique.outbound.ips[! subnet.16 %in% convert.subnet.16(connections), ]
-      candidates <- candidates[sample.int(.N), ]
-      candidates <- candidates[!duplicated(subnet.16), ip]
-    }
-
-    connections[length(connections) + 1] <- sample(candidates, 1)
-
-  }
-
-  connections
+for (i in seq_len(nrow(scenarios))) {
+  
+  share.reachable <- scenarios[i, share.reachable]
+  
+  n.assumed.unreachable <- floor(length(good_peers) *
+      ((1 - share.reachable) / share.reachable))
+  
+  do.deduplication <- scenarios[i, deduplication]
+  
+  set.seed(314)
+  
+  simulated.networks[[ scenarios[i, name] ]] <-
+    xmrpeers::gen.network(outbound.ips = good_peers,
+      malicious.ips = suspected.malicious.ips,
+      n.unreachable = n.assumed.unreachable,
+      already.connected.subnet.level = 24,
+      deduplication.subnet.level = 24,
+      do.deduplication = do.deduplication)
+  
 }
 
 
 
-set.seed(314)
 
 
 
-status.quo <- future.apply::future_replicate(n.nodes,
-  choose.peers(unique.outbound.ips, c(), n.default.out, "status quo"),
-  future.packages = "data.table")
-
-deduplicated <- future.apply::future_replicate(n.nodes,
-  choose.peers(unique.outbound.ips, c(), n.default.out, "subnet deduplication"),
-  future.packages = "data.table")
+malicious.connection.summary <- sapply(simulated.networks, FUN = function(x) {
+  x <- copy(x$nodes)
+  x[malicious == FALSE, c(`N honest nodes` = .N, summary(n.malicious.outbound))]
+}) |> t() |> data.frame(check.names = FALSE)
 
 
-mean(c(status.quo) %in% malicious.ips)
-mean(c(deduplicated) %in% malicious.ips)
+malicious.connection.summary <- cbind(
+  Scenario = rownames(malicious.connection.summary), malicious.connection.summary)
 
-churn.peers <- function(x, churns, method) {
-  for (i in seq_len(churns)) {
-    x <- sample(x, length(x) - 1)
-    x <- choose.peers(unique.outbound.ips, x, n.default.out, method)
-  }
-  x
+
+fix.latex.table <- function(latex.output, label) {
+  
+  latex.output <- gsub("caption*", "caption", latex.output, fixed = TRUE)
+  # Removing the "*" means that the table is numbered in the final PDF output
+  latex.output <- gsub("\\large ", "", latex.output, fixed = TRUE)
+  # Remove font size in the caption
+  
+  latex.output <- gsub("\\end{table}",
+    paste0("\\label{table-", label, "}\n\\end{table}"), latex.output, fixed = TRUE)
+  
+  cat(latex.output, file = paste0("pdf/tables/", label, ".tex"))
+  
+  invisible(NULL)
+  
 }
 
-set.seed(314)
 
-status.quo.churned <- future.apply::future_apply(status.quo, MARGIN = 2,
-  function(x) { churn.peers(x, 100, "status quo") },
-  future.seed = TRUE, future.packages = "data.table")
+latex.output <- gt(malicious.connection.summary) |>
+  tab_header(title = "Summary statistics: Number of outbound connections, out of 12, to suspected malicious nodes") |>
+  fmt_number(drop_trailing_zeros = TRUE) |>
+  #  cols_align_decimal() |>
+  tab_options(table.font.size = "") |>
+  # latex.use_longtable = TRUE, 
+  # https://cran.r-project.org/web/packages/gt/news/news.html
+  # https://github.com/rstudio/gt/issues/1852
+  as_latex() |>
+  as.character()
 
-deduplicated.churned <- future.apply::future_apply(deduplicated, MARGIN = 2,
-  function(x) { churn.peers(x, 100, "subnet deduplication") },
-  future.seed = TRUE, future.packages = "data.table")
+fix.latex.table(latex.output, "malicious-connection-summary")
 
-mean(c(status.quo.churned) %in% malicious.ips)
-mean(c(deduplicated.churned) %in% malicious.ips)
+
+
+inbound.summary <- sapply(simulated.networks, FUN = function(x) {
+  x <- copy(x$nodes)
+  x[malicious == FALSE & reachable == TRUE, c(`N honest reachable nodes` = .N, summary(n.inbound))]
+}) |> t() |> data.frame(check.names = FALSE)
+
+
+inbound.summary <- cbind(
+  Scenario = rownames(inbound.summary), inbound.summary)
+
+latex.output <- gt(inbound.summary) |>
+  tab_header(title = "Summary statistics: Number of inbound connections to honest reachable nodes") |>
+  fmt_number(drop_trailing_zeros = TRUE) |>
+  # cols_align_decimal() |>
+  tab_options(table.font.size = "") |>
+  as_latex() |>
+  as.character()
+
+fix.latex.table(latex.output, "inbound-summary")
+
+
+
+
+network.stats.summary <- sapply(simulated.networks, FUN = function(x) {
+  sapply(x$network.stats, function(x) {x$centralization})
+}) |> t() |> data.frame(check.names = FALSE)
+
+network.stats.summary <- cbind(
+  Scenario = rownames(network.stats.summary), network.stats.summary)
+
+setDT(network.stats.summary)
+
+setnames(network.stats.summary, c("centr_betw", "centr_clo", "centr_degree", "centr_eigen"),
+  c("Betweenness", "Closeness", "Degree", "Eigenvector"))
+
+
+latex.output <- gt(network.stats.summary) |>
+  tab_header(title = "Centrality statistics of the network") |>
+  fmt_scientific() |>
+  tab_options(latex.use_longtable = TRUE, table.font.size = "") |>
+  as_latex() |>
+  as.character()
+
+fix.latex.table(latex.output, "network-stats")
+
+
+
+
+
+n.inbound <- list()
+
+for (i in seq_along(simulated.networks)) {
+  n.inbound[[i]] <- data.table(
+    algorithm = scenarios[i, ifelse(deduplication, "Deduplication", "Status quo")],
+    unreachable = scenarios[i, paste0( 100 * (1 - share.reachable), "% unreachable nodes")],
+    n.inbound = simulated.networks[[i]]$nodes[malicious == FALSE & reachable == TRUE, n.inbound]
+  )
+}
+
+n.inbound <- rbindlist(n.inbound)
+
+n.inbound[, algorithm := factor(algorithm, c("Status quo", "Deduplication"))]
+# Fix order
+
+
+png("pdf/images/inbound-histogram.png", width = 800, height = 800)
+
+ggplot(n.inbound, aes(n.inbound, fill = I("#00aebf"))) +
+  # Color from https://www.getmonero.org/press-kit/logos/mrl-logo.svg
+  geom_histogram(binwidth = 2) +
+  facet_grid(vars(algorithm), vars(unreachable)) +
+  ggtitle("Histograms of inbound connections of honest reachable nodes") +
+  xlab("Number of inbound connections") +
+  ylab("Number of nodes")  +
+  theme(legend.position = "top", legend.text = element_text(size = 12), legend.title = element_text(size = 15),
+    plot.title = element_text(size = 20),
+    plot.subtitle = element_text(size = 15),
+    axis.text = element_text(size = 15),
+    axis.title.x = element_text(size = 15, margin = margin(t = 10)),
+    axis.title.y = element_text(size = 15), strip.text = element_text(size = 15))
+
+dev.off()
+
+
+
 
 
 
