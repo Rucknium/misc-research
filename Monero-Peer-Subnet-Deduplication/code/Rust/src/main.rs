@@ -41,7 +41,7 @@ use clap::Parser;
 #[command(version, about, long_about = None)]
 struct Cli {
    /// Collect peer lists provided by other nodes and write to peer_list.txt
-   #[arg(short, long, action = clap::ArgAction::SetTrue)] // Defines -c/--collect-peer-lists flag
+   #[arg(short, long)] // Defines -c/--collect-peer-lists flag
    collect_peer_lists: bool,
 }
 
@@ -63,10 +63,19 @@ static CONNECTOR: OnceLock<
 static BAD_PEERS_CHANNEL: OnceLock<mpsc::Sender<(SocketAddr, bool)>> = OnceLock::new();
 
 /// A [`Semaphore`] to limit the amount of concurrent connection attempts so we don't overrun ourself.
-static CONNECTION_SEMAPHORE: Semaphore = Semaphore::const_new(1);
+static CONNECTION_SEMAPHORE: OnceLock<Semaphore> = OnceLock::new();
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
+    // If collecting peer lists, only use one thread so that data is written to
+    // peer_lists.txt seqentially.
+    let n_semaphore_permits: usize = match Cli::parse().collect_peer_lists {
+        true => 1,
+        false => 100
+    };
+    let _ = CONNECTION_SEMAPHORE.set(Semaphore::new(n_semaphore_permits));
+    // Linter says that the result should be captured, but ignored by "_"
+    
     FmtSubscriber::builder()
         .with_max_level(LevelFilter::DEBUG)
         .init();
@@ -141,7 +150,7 @@ async fn main() {
 /// Check a node is reachable, sending the address down the [`BAD_PEERS_CHANNEL`] if it is.
 async fn check_node(addr: SocketAddr) -> Result<(), tower::BoxError> {
     // Acquire a semaphore permit.
-    let _guard = CONNECTION_SEMAPHORE.acquire().await.unwrap();
+    let _guard = CONNECTION_SEMAPHORE.get().unwrap().acquire().await.unwrap();
 
     if Cli::parse().collect_peer_lists {
         let mut peer_list_file = OpenOptions::new()
