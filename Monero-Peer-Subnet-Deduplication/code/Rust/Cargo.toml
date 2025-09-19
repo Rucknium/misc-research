@@ -14,3 +14,4 @@ cuprate-p2p-core = { git = "https://github.com/Cuprate/cuprate.git", branch = "e
 cuprate-wire = { git = "https://github.com/Cuprate/cuprate.git", branch = "expose-support-flags" }
 futures = "0.3.31"
 rand = "0.8"
+clap = { version = "4.5.40", features = ["derive"] }
