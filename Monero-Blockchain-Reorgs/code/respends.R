@@ -224,7 +224,7 @@ stepfun.timing.spent.key_image <- stepfun(timing.spent.key_image$earliest.time.s
   c(0, timing.spent.key_image$cumulative.share.spent))
 
 
-png("sep-14-respends.png", width = 600, height = 600)
+png("sep-14-respends-UPDATE-sep-24.png", width = 600, height = 600)
 
 xlim <- c(reorg.timestamp, max(timing.spent.key_image$earliest.time.spent.key_image))
 
@@ -232,6 +232,7 @@ par(mar = c(7, 4, 4, 2) + 0.1, cex = 1.4)
 plot(stepfun.timing.spent.key_image,
   main = "Cumulative share of invalidated txs that have had at least\none key image confirmed in another tx after invalidation",
   # cex.main = 0.8,
+  cex = 0.8,
   ylim = c(0, 1), yaxs = "i", xaxt = "n", xlab = "", ylab = "Cumulative share",
   xlim = xlim)
 
@@ -244,7 +245,11 @@ axis(side = 4)
 axis.Date(1, at = seq(xlim[1], xlim[2], by = 60^2 * 6))
 axis.POSIXct(1, at = seq(xlim[1], xlim[2], by = 60^2 * 6), las = 3)
 
+one.week.in.seconds <- 60^2 * 24 * 7
+
 abline(v = reorg.timestamp, col = "red", lty = "dashed")
+abline(v = reorg.timestamp + one.week.in.seconds, col = "blue", lty = "dashed")
+reorg.timestamp
 
 # Using https://stackoverflow.com/questions/45366243/text-labels-with-background-colour-in-r
 labels <- "Reorg incident"
@@ -254,8 +259,18 @@ boxes <- sapply(nchar(labels), FUN = function(n) {
 })
 
 text(x = reorg.timestamp, y = 0.5, labels = boxes, col = "white", srt = 90, family = "mono")
-text(x = reorg.timestamp, y = 0.5, labels = labels, family = "mono",
-  srt = 90, col = "red")
+text(x = reorg.timestamp, y = 0.5, labels = labels, col = "red", srt = 90, family = "mono")
+
+labels <- "txpool cleared"
+
+boxes <- sapply(nchar(labels), FUN = function(n) {
+  paste(rep("\U2588", n), collapse = "")
+})
+
+text(x = reorg.timestamp + one.week.in.seconds, y = 0.25, labels = boxes,
+  col = "white", srt = 90, family = "mono")
+text(x = reorg.timestamp + one.week.in.seconds, y = 0.25, labels = labels,
+  col = "blue", srt = 90, family = "mono")
 
 dev.off()
 
