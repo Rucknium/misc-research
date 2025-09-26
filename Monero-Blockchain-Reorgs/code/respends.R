@@ -276,6 +276,28 @@ dev.off()
 
 
 
+orphaned.blocks.extended <- orphaned.blocks
+
+orphaned.blocks.extended$invalidated <- orphaned.blocks.extended$tx_hash %in% invalidated.tx_hashes
+
+orphaned.blocks.extended <- unique(orphaned.blocks.extended[, c("block_height", "tx_hash", "invalidated")] )
+orphaned.blocks.extended <- merge(orphaned.blocks.extended,
+  data.frame(block_height = 1:block.reorg.depth + last.common.block_height), all = TRUE)
+# Don't miss any blocks with zero txs
+n.invalidated <- table(orphaned.blocks.extended$block_height, orphaned.blocks.extended$invalidated)
+
+n.invalidated <- as.data.frame(unclass(n.invalidated))
+n.invalidated$height <- as.integer(rownames(n.invalidated))
+
+knitr::kable(n.invalidated[, c("height", "FALSE", "TRUE")],
+  col.names = c("Orphan chain block height", "Valid", "Invalidated"),
+  format = "pipe", row.names = FALSE, format.args = list(big.mark = ","))
+
+
+
+
+
+
 
 
 
