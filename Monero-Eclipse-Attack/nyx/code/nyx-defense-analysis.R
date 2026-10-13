@@ -134,8 +134,8 @@ reachable.whitelists <- rbindlist(list(
 reachable.whitelists[, sim.run := factor(sim.run, levels = c("Status_quo", "Proposed_defense"))]
 reachable.whitelists[, variable := factor(variable, levels = c("adversary.peers", "honest.peers"))]
 
-if (! dir.exists("images")) {
-  dir.create("images")
+if (! dir.exists("../images")) {
+  dir.create("../images")
 }
 
 
@@ -172,7 +172,7 @@ unreachable.whitelists[, sim.run := factor(sim.run, levels = c("Status_quo", "Pr
 unreachable.whitelists[, variable := factor(variable, levels = c("adversary.peers", "honest.peers"))]
 
 
-png("../imageswhite-list-unreachable.png", width = 800, height = 800)
+png("../images/white-list-unreachable.png", width = 800, height = 800)
 
 p <- ggplot(unreachable.whitelists, aes(time, value, colour = variable)) +
   geom_line(linewidth = 2) +
@@ -207,7 +207,7 @@ data.table::setnames(unreachable.outbound.adversaries,
 
 unreachable.outbound.adversaries[, sim.run := factor(sim.run, levels = c("Status_quo", "Proposed_defense"))]
 
-png("../imagesoutbound-adversaries-unreachable.png", width = 800, height = 800)
+png("../images/outbound-adversaries-unreachable.png", width = 800, height = 800)
 
 p <- ggplot(unreachable.outbound.adversaries, aes(time, Outbound_connections_to_adversary_peers)) +
   geom_line() +
@@ -571,7 +571,7 @@ p3.theme <- theme(axis.text.x = element_text(angle = 90, hjust = 1),
 
 
 
-png("../imagespeerlist-draws-unreachable-defense.png", width = 800, height = 800)
+png("../images/peerlist-draws-unreachable-defense.png", width = 800, height = 800)
 
 
 connection.data <- unreachable.connection.data.defense
@@ -602,7 +602,7 @@ dev.off()
 
 
 
-png("../imagespeerlist-draws-unreachable-status-quo.png", width = 800, height = 800)
+png("../images/peerlist-draws-unreachable-status-quo.png", width = 800, height = 800)
 
 
 connection.data <- unreachable.connection.data.status.quo
@@ -634,7 +634,7 @@ dev.off()
 
 
 
-png("../imagespeerlist-draws-reachable-defense.png", width = 800, height = 800)
+png("../images/peerlist-draws-reachable-defense.png", width = 800, height = 800)
 
 
 connection.data <- reachable.connection.data.defense
@@ -667,7 +667,7 @@ dev.off()
 
 
 
-png("../imagespeerlist-draws-reachable-status-quo.png", width = 800, height = 800)
+png("../images/peerlist-draws-reachable-status-quo.png", width = 800, height = 800)
 
 
 connection.data <- reachable.connection.data.status.quo
