@@ -1,12 +1,12 @@
 general:
-  stop_time: 1560m
+  stop_time: 3000m
   simulation_seed: 12345
   bootstrap_end_time: 210m
   enable_dns_server: true
   shadow_log_level: warning
   progress: true
   runahead: 100ms
-  process_threads: 192
+  process_threads: 1
   native_preemption: true
   reachable_fraction: 0.0
   daemon_defaults:
