@@ -349,13 +349,13 @@ get.connection.data <- function(sim.run, relay.id) {
     # new connection could have been drawn any time between the current and previous poll
     # time.
     whitelist.draw.positions.honest <- whitelists[
-      time == most.recent.poll.time & (! is.adversary), which(peer %in% x$connections)]
+      time == most.recent.poll.time, which(peer %in% x$connections & (! is.adversary))]
     whitelist.draws.n.honest <- length(whitelist.draw.positions.honest)
     graylist.draws.n.honest <- graylists[
       time == most.recent.poll.time & (! is.adversary), sum(peer %in% x$connections)]
 
     whitelist.draw.positions.adversary <- whitelists[
-      time == most.recent.poll.time & (is.adversary), which(peer %in% x$connections)]
+      time == most.recent.poll.time, which(peer %in% x$connections & (is.adversary))]
     whitelist.draws.n.adversary <- length(whitelist.draw.positions.adversary)
     graylist.draws.n.adversary <- graylists[
       time == most.recent.poll.time & (is.adversary), sum(peer %in% x$connections)]
